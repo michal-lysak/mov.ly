@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "431161171709",
+    "project_id": "movies-and-series-app---movly",
+    "storage_bucket": "movies-and-series-app---movly.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:431161171709:android:1eacfc8d3daa013c276894",
+        "android_client_info": {
+          "package_name": "com.example.movly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-w-VpMIcJRkHbLShDc7kezwTPD6kS0WY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
