@@ -4,7 +4,7 @@ LOGIN PAGE
 
 ON:
 Logged in-> Home Page
-Not hav an account -> Register Page
+No account -> Register Page
 
 */
 
@@ -20,6 +20,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   @override
+
+  late final authCubit = context.read<AuthCubit>();
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
