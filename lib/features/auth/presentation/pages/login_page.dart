@@ -10,6 +10,7 @@ No account -> Register Page
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+// import 'package:flutter_bloc/flutter_bloc.dart'; // Uncomment if using bloc
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,10 +20,37 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  // Move controllers to State class
+  final usernameController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  // Uncomment if you have AuthCubit set up
+  // late final authCubit = context.read<AuthCubit>();
+
   @override
+  void dispose() {
+    // Clean up controllers when widget is disposed
+    usernameController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
-  late final authCubit = context.read<AuthCubit>();
+  // sign in method
+  void signUserIn() {
+    // Implement your sign in logic here
+    // For example:
+    // authCubit.signIn(
+    //   usernameController.text,
+    //   passwordController.text,
+    // );
+  }
 
+  void signInWithGoogle() {
+    // Implement Google sign in
+    // authCubit.signInWithGoogle();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -34,30 +62,28 @@ class _LoginPageState extends State<LoginPage> {
         ),
         centerTitle: true,
       ),
-
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              "To use this app, please sign in.",
-              style: GoogleFonts.kronaOne(
-                fontSize: 28,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "To use this app, please sign in.",
+                style: GoogleFonts.kronaOne(
+                  fontSize: 28,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 50),
-
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Implement Google sign in navigation
-              },
-              child: const Text('Sign In with Google'),
-            ),
-          ],
+              const SizedBox(height: 50),
+              ElevatedButton(
+                onPressed: signInWithGoogle,
+                child: const Text('Sign In with Google'),
+              ),
+            ],
+          ),
         ),
       ),
     );

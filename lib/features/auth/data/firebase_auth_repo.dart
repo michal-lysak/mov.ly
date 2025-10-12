@@ -1,14 +1,13 @@
 /*
 
-
-FIREBASE IS OUR BACKEND - can swipe out any backend here...
+FIREBASE IS OUR BACKEND - You can swap out any backend here..
 
 */
 
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:movly/features/auth/domain/entities/app_user.dart';
-import 'package:movly/features/auth/domain/repos/auth_repo.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../domain/entities/app_user.dart';
+import '../domain/repos/auth_repo.dart';
 
 class FirebaseAuthRepo implements AuthRepo {
   // access to firebase
@@ -110,7 +109,6 @@ class FirebaseAuthRepo implements AuthRepo {
     }
   }
 
- 
   // GOOGLE SIGN IN
   @override
   Future<AppUser?> signInWithGoogle() async {
