@@ -12,7 +12,20 @@
           "package_name": "com.example.movly"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "431161171709-ps4rdh8ort1jjlf7a4c9le38dh0sdegq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.movly",
+            "certificate_hash": "7fee83f3f5687a80cacceae16e07655f22ac7798"
+          }
+        },
+        {
+          "client_id": "431161171709-ckpuugj2kresqmk93320740nbu5ctto0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD-w-VpMIcJRkHbLShDc7kezwTPD6kS0WY"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "431161171709-ckpuugj2kresqmk93320740nbu5ctto0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "431161171709-7qgebm6cs4ei0fu0g5iajuv0839g24qk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.movly"
+              }
+            }
+          ]
         }
       }
     }

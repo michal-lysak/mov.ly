@@ -4,10 +4,11 @@ import 'package:movly/firebase_options.dart';
 import 'package:movly/features/auth/presentation/pages/login_page.dart';
 
 void main() async {
-  // firebase setup
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-runApp(const MyApp());
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -15,10 +16,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Movly',
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+      ),
+      // Start on the login page
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        /*'/home': (context) => const HomePage(),*/
+      },
     );
   }
 }

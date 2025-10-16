@@ -1,16 +1,6 @@
-/*
-
-LOGIN PAGE
-
-ON:
-Logged in-> Home Page
-No account -> Register Page
-
-*/
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart'; // Uncomment if using bloc
+import 'package:movly/features/auth/data/firebase_auth_repo.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,34 +10,30 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // Move controllers to State class
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
+  final FirebaseAuthRepo _authRepo = FirebaseAuthRepo();
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  // Uncomment if you have AuthCubit set up
-  // late final authCubit = context.read<AuthCubit>();
+  // Google Sign-In
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-  @override
-  void dispose() {
-    // Clean up controllers when widget is disposed
-    usernameController.dispose();
-    passwordController.dispose();
-    super.dispose();
-  }
-
-  // sign in method
-  void signUserIn() {
-    // Implement your sign in logic here
-    // For example:
-    // authCubit.signIn(
-    //   usernameController.text,
-    //   passwordController.text,
-    // );
-  }
-
-  void signInWithGoogle() {
-    // Implement Google sign in
-    // authCubit.signInWithGoogle();
+    try {
+      final user = await _authRepo.signInWithGoogle();
+      if (user != null) {
+        // Navigate to home after login
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        setState(() => _errorMessage = "Google Sign-In cancelled.");
+      }
+    } catch (e) {
+      setState(() => _errorMessage = "Error: $e");
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -73,15 +59,24 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 "To use this app, please sign in.",
                 style: GoogleFonts.kronaOne(
-                  fontSize: 28,
+                  fontSize: 24,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 50),
-              ElevatedButton(
-                onPressed: signInWithGoogle,
-                child: const Text('Sign In with Google'),
-              ),
+              const SizedBox(height: 40),
+              if (_errorMessage != null)
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: 20),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: _signInWithGoogle,
+                      child: const Text('Sign In with Google'),
+                    ),
             ],
           ),
         ),
