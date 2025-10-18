@@ -81,9 +81,11 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 20),
 
-             if (_isLoading) 
+             _isLoading
+                ? 
                     const CircularProgressIndicator()
-              else
+              : Column(
+                children: [
               /*
                 // email textfield
                 MyTextfield(
@@ -105,7 +107,8 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 10),
 
                 MyGoogleSignInButton(onTap: _signInWithGoogle),
-
+            ],
+            ),
             ],
           ),
         ),
