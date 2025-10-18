@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:movly/firebase_options.dart';
 import 'package:movly/features/auth/presentation/pages/login_page.dart';
+import 'themes/light_mode.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,14 +16,13 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
+
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Movly',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
-      ),
+      title: 'Mov.ly',
+
+      theme: lightMode,
       // Start on the login page
       initialRoute: '/login',
       routes: {

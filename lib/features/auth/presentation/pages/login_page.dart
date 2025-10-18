@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/auth/data/firebase_auth_repo.dart';
+import 'package:movly/features/auth/presentation/components/google_sign_in_button.dart';
+//import 'package:movly/features/auth/presentation/components/my_textfield.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,6 +15,11 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuthRepo _authRepo = FirebaseAuthRepo();
   bool _isLoading = false;
   String? _errorMessage;
+
+  /* // text controllers
+  final emailController = TextEditingController();
+  final pwController = TextEditingController();
+*/
 
   // Google Sign-In
   Future<void> _signInWithGoogle() async {
@@ -55,6 +62,7 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
+            
             children: [
               Text(
                 "To use this app, please sign in.",
@@ -63,20 +71,41 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 40),
+
               if (_errorMessage != null)
                 Text(
                   _errorMessage!,
                   style: const TextStyle(color: Colors.red),
                   textAlign: TextAlign.center,
                 ),
+
               const SizedBox(height: 20),
-              _isLoading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: _signInWithGoogle,
-                      child: const Text('Sign In with Google'),
-                    ),
+
+             if (_isLoading) 
+                    const CircularProgressIndicator()
+              else
+              /*
+                // email textfield
+                MyTextfield(
+                  controller: emailController,
+                  hintText: "Email",
+                  obscureText: false,
+                ),
+
+                const SizedBox(height: 10),
+
+                //pw textfield
+                MyTextfield(
+                  controller: pwController, 
+                  hintText: "Password", 
+                  obscureText: true,
+                ),
+                */
+
+                const SizedBox(height: 10),
+
+                MyGoogleSignInButton(onTap: _signInWithGoogle),
+
             ],
           ),
         ),
