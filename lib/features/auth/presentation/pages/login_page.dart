@@ -31,25 +31,27 @@ class _LoginPageState extends State<LoginPage> {
     _isLoading = true;
     _errorMessage = null;
   });
-
   if (email.isEmpty || pw.isEmpty) {
     setState(() {
-      _isLoading = false;
       _errorMessage = "Email and password cannot be empty.";
     });
     return;
   }
 
   try {
-    // Example using Firebase Auth
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: pw);
+    final user = await _authRepo.loginWithEmailPassword(email, pw);
 
-    // Login successful → navigate to home
+  if (user != null) {
+    // Login succeeded, user object is available
     Navigator.pushReplacementNamed(context, '/home');
+  } else {
+    // Login returned null (unexpected, but possible depending on your repo)
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Login failed: no user returned.")),
+    );
+  }
 
   } on FirebaseAuthException catch (e) {
-    // Handle specific Firebase errors
     String message;
     if (e.code == 'user-not-found') {
       message = "No user found for that email.";
@@ -90,6 +92,53 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // forgot password box
+void openForgotPassword() {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text("Forgot Password"),
+      content: MyTextfield(
+          controller: emailController,
+          hintText: "Enter email..",
+          obscureText: false
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: Text(
+            "Cancel",
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.inversePrimary),
+          ),
+        ),
+        TextButton(
+          onPressed: () async {
+            final message = await _authRepo.sendPasswordResetEmail(emailController.text.trim());
+
+            if (message.isNotEmpty) {
+              setState(() => _errorMessage = message);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Password reset email sent."),
+                ),
+              );
+            }
+            Navigator.pop(dialogContext);
+          },
+          child: const Text(
+              "Reset Password",
+              style: TextStyle(
+                  color: Colors.black,
+          )
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
-            
+
             children: [
               Text(
                 "To use this app, you need to sign in.",
@@ -119,16 +168,16 @@ class _LoginPageState extends State<LoginPage> {
                 textAlign: TextAlign.center,
               ),
 
-              
+
 
               const SizedBox(height: 20),
 
              _isLoading
-                ? 
+                ?
                     const CircularProgressIndicator()
               : Column(
                 children: [
-              
+
                 // email textfield
                 MyTextfield(
                   controller: emailController,
@@ -140,11 +189,27 @@ class _LoginPageState extends State<LoginPage> {
 
                 //pw textfield
                 MyTextfield(
-                  controller: pwController, 
-                  hintText: "Password", 
+                  controller: pwController,
+                  hintText: "Password",
                   obscureText: true,
                 ),
-                
+
+                //const SizedBox(height: 10),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                  GestureDetector(
+                     onTap: () => openForgotPassword(),
+                    child: Text(
+                      "Forgot Password?",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.inversePrimary,
+                        //decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],),
 
                 const SizedBox(height: 10),
 
