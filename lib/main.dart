@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:movly/features/auth/presentation/pages/liking_titles.dart';
 import 'package:movly/firebase_options.dart';
 import 'package:movly/features/auth/presentation/pages/login_page.dart';
 import 'themes/light_mode.dart';
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
+        '/preHome': (context) => const preHome_Page(),
         /*'/home': (context) => const HomePage(),*/
       },
     );

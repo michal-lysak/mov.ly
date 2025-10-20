@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
 
   if (user != null) {
     // Login succeeded, user object is available
-    Navigator.pushReplacementNamed(context, '/home');
+    Navigator.pushReplacementNamed(context, '/preHome');
   } else {
     // Login returned null (unexpected, but possible depending on your repo)
     ScaffoldMessenger.of(context).showSnackBar(
@@ -81,7 +81,7 @@ class _LoginPageState extends State<LoginPage> {
       final user = await _authRepo.signInWithGoogle();
       if (user != null) {
         // Navigate to home after login
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/preHome');
       } else {
         setState(() => _errorMessage = "Google Sign-In cancelled.");
       }
