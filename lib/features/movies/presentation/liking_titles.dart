@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
+import 'package:movly/features/movies/presentation/widgets/cached_poster_image.dart';
 
 class PreHomePage extends StatelessWidget {
   const PreHomePage({super.key});
@@ -53,11 +54,9 @@ class PreHomePage extends StatelessWidget {
                       itemCount: movies.length,
                       itemBuilder: (context, index) {
                         final movie = movies[index];
-                        final posterUrl = movie.posterPath.isNotEmpty
-                            ? 'https://image.tmdb.org/t/p/w500${movie.posterPath}'
-                            : 'https://via.placeholder.com/150x200';
+                        return CachedPosterImage.fromMovie(movie);
 
-                        return ClipRRect(
+                      /*  return ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Stack(
                             alignment: Alignment.bottomCenter,
@@ -70,7 +69,7 @@ class PreHomePage extends StatelessWidget {
                               ),
                             ],
                           ),
-                        );
+                        );*/
                       },
                     );
                   },
