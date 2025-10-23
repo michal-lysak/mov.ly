@@ -21,7 +21,7 @@ class Movie {
       id: json['id'] as int,
       title: (json['title'] ?? 'Untitled'),
       overview: (json['overview'] ?? '') as String,
-      posterPath: (json['path'] ?? '') as String,
+      posterPath: (json['poster_path'] ?? '') as String,
       releaseDate: (json['release_date'] ?? 'Unknown') as String,
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
     );

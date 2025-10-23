@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:movly/features/auth/presentation/pages/liking_titles.dart';
+import 'package:movly/features/movies/presentation/liking_titles.dart';
+import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/firebase_options.dart';
 import 'package:movly/features/auth/presentation/pages/login_page.dart';
 import 'themes/light_mode.dart';
@@ -12,6 +13,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(const MyApp());
 }
 
@@ -30,7 +32,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
-        '/preHome': (context) => const preHome_Page(),
+        '/preHome': (context) => const PreHomePage(),
         /*'/home': (context) => const HomePage(),*/
       },
     );
