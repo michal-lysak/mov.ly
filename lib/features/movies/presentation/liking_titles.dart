@@ -22,12 +22,11 @@ class PreHomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              const Center(
+              Center(
                 child: Text(
                   'Choose your favorite movies',
                   style: GoogleFonts.kronaOne(
                     fontSize: 24,
-                    fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
                 ),
