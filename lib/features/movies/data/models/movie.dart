@@ -27,6 +27,14 @@ class Movie {
     );
   }
 
+  /// Computed property for full poster URL
+  String get posterUrl {
+    if (posterPath.isEmpty) {
+      return 'https://via.placeholder.com/300x450?text=No+Image';
+    }
+    return 'https://image.tmdb.org/t/p/w185$posterPath';
+  }
+
   @override
   String toString() {
     return 'Movie(id: $id, title: $title, voteAverage: $voteAverage)';
