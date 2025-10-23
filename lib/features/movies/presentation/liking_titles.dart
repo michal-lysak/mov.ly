@@ -4,8 +4,16 @@ import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/presentation/widgets/cached_poster_image.dart';
 
-class PreHomePage extends StatelessWidget {
+class PreHomePage extends StatefulWidget {
   const PreHomePage({super.key});
+
+  @override
+  State<PreHomePage> createState() => _PreHomePageState();
+}
+
+class _PreHomePageState extends State<PreHomePage> {
+  final _selectedMovies = <int>{};
+
   @override
   Widget build(BuildContext context) {
     final tmdbService = TMDBService();
@@ -56,7 +64,37 @@ class PreHomePage extends StatelessWidget {
                         itemCount: movies.length,
                         itemBuilder: (context, index) {
                           final movie = movies[index];
-                          return CachedPosterImage.fromMovie(movie);
+                          final isSelected = _selectedMovies.contains(movie.id);
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedMovies.remove(movie.id);
+                                } else {
+                                  _selectedMovies.add(movie.id);
+                                }
+                              });
+                            },
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                CachedPosterImage.fromMovie(movie),
+                                if (isSelected)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.favorite,
+                                          color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    )
+                                  ),
+                              ],
+                            ),
+                          );
                         },
                       );
                     },
@@ -76,7 +114,7 @@ class PreHomePage extends StatelessWidget {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withValues(alpha: 0.6),
+                              Colors.black.withOpacity(0.8),
                             ],
                           ),
                         ),
