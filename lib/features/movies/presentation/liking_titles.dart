@@ -98,26 +98,45 @@ class _PreHomePageState extends State<PreHomePage> {
     super.dispose();
   }
 
+
+
+// ------ UI ------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: Column(
           children: [
-            const SizedBox(height: 90),
-            Text(
-              'Mov.ly',
-              style: GoogleFonts.lilyScriptOne(fontSize: 40),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Choose your favorite movies',
-              style: GoogleFonts.kronaOne(
-                fontSize: 24,
+            const SizedBox(height: 25),
+            SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Mov.ly',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lilyScriptOne(fontSize: 30),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 50),
+                      child: Text(
+                        'Select your favorite movies',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.kronaOne(fontSize: 24),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 10),
+
             // The movie grid with a fade overlay below:
             Expanded(
               child: RefreshIndicator(
@@ -127,12 +146,12 @@ class _PreHomePageState extends State<PreHomePage> {
                     // Movie grid
                     GridView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(17),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
                         childAspectRatio: 0.7,
                       ),
                       itemCount: _movies.length + (_hasMore ? 1 : 0),
