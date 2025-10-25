@@ -6,19 +6,22 @@ FIREBASE IS OUR BACKEND - You can swap out any backend here..
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
 import '../domain/entities/app_user.dart';
 import '../domain/repos/auth_repo.dart';
+import 'firestore_cloud/user_service.dart';
 
 class FirebaseAuthRepo implements AuthRepo {
   // access to firebase
-  final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final UserService _userService = UserService();
 
   // LOGIN: Email & Password
   @override
   Future<AppUser?> loginWithEmailPassword(String email, String password) async {
     try {
       // attempt sign in
-      UserCredential userCredential = await firebaseAuth
+      UserCredential userCredential = await _firebaseAuth
           .signInWithEmailAndPassword(email: email, password: password);
 
       // create user
@@ -27,7 +30,6 @@ class FirebaseAuthRepo implements AuthRepo {
         email: email,
       );
 
-      // return user
       return user;
     }
 
@@ -43,8 +45,15 @@ class FirebaseAuthRepo implements AuthRepo {
       String name, String email, String password) async {
     try {
       // attempt sign up
-      UserCredential userCredential = await firebaseAuth
+      UserCredential userCredential = await _firebaseAuth
           .createUserWithEmailAndPassword(email: email, password: password);
+
+      // create user in firestore
+      await _userService.createUser(
+        userCredential.user!.uid,
+        email: email,
+        //displayName: name,
+      );
 
       // create user
       AppUser user = AppUser(uid: userCredential.user!.uid, email: email);
@@ -64,7 +73,7 @@ class FirebaseAuthRepo implements AuthRepo {
   Future<void> deleteAccount() async {
     try {
       // get current user
-      final user = firebaseAuth.currentUser;
+      final user = _firebaseAuth.currentUser;
 
       // check if there is a logged in user
       if (user == null) throw Exception('No user logged in..');
@@ -83,7 +92,7 @@ class FirebaseAuthRepo implements AuthRepo {
   @override
   Future<AppUser?> getCurrentUser() async {
     // get current logged in user from firebase
-    final firebaseUser = firebaseAuth.currentUser;
+    final firebaseUser = _firebaseAuth.currentUser;
 
     // no logged in user
     if (firebaseUser == null) return null;
@@ -95,14 +104,14 @@ class FirebaseAuthRepo implements AuthRepo {
   // LOGOUT
   @override
   Future<void> logout() async {
-    await firebaseAuth.signOut();
+    await _firebaseAuth.signOut();
   }
 
   // RESET PASSWORD
   @override
   Future<String> sendPasswordResetEmail(String email) async {
     try {
-      await firebaseAuth.sendPasswordResetEmail(email: email);
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
       return "Password reset email sent! Check your inbox";
     } catch (e) {
       return "An error occured: $e";
@@ -130,13 +139,22 @@ class FirebaseAuthRepo implements AuthRepo {
 
       // sign in with these credentials
       UserCredential userCredential =
-          await firebaseAuth.signInWithCredential(credential);
+          await _firebaseAuth.signInWithCredential(credential);
 
       // firebase user
       final firebaseUser = userCredential.user;
 
       // user cancelled sign-in process
       if (firebaseUser == null) return null;
+
+      // if new user, create a new document in firestore
+      if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+        await _userService.createUser(
+          firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          //displayName: firebaseUser.displayName,
+        );
+      }
 
       AppUser appUser = AppUser(
         uid: firebaseUser.uid,
