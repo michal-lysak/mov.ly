@@ -6,6 +6,8 @@ import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/presentation/widgets/cached_poster_image.dart';
 
+import '../../auth/data/firestore_cloud/for_you_service.dart';
+
 class PreHomePage extends StatefulWidget {
   const PreHomePage({super.key});
 
@@ -16,6 +18,8 @@ class PreHomePage extends StatefulWidget {
 class _PreHomePageState extends State<PreHomePage> {
   final favoritesService = FavoritesService();
   final tmdbService = TMDBService();
+  final forYouService = ForYouService();
+
   final ScrollController _scrollController = ScrollController();
 
   final List<Movie> _movies = [];
@@ -33,6 +37,11 @@ class _PreHomePageState extends State<PreHomePage> {
     super.initState();
     _fetchMovies();
     _scrollController.addListener(_onScroll);
+
+
+  }
+  void _startForYouListener(String userId) {
+    forYouService.startListeningForUser(userId);
   }
 
   void _onScroll() {
@@ -265,6 +274,9 @@ class _PreHomePageState extends State<PreHomePage> {
                                   try {
                                     await favoritesService.addFavoritesBatch(
                                         userId, _favoriteIds.toList());
+
+                                    // Start the ForYou listener
+                                    _startForYouListener(userId);
 
                                     setState(() {
                                       _isSaving = false;
