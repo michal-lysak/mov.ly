@@ -296,6 +296,7 @@ class _PreHomePageState extends State<PreHomePage> {
                                               Text('Failed to save favorites.')),
                                     );
                                   }
+                               Navigator.pushReplacementNamed(context, '/home');
                                 },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(

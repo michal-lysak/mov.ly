@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:movly/features/movies/presentation/liking_titles.dart';
+import 'package:movly/features/movies/presentation/home_page.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/firebase_options.dart';
 import 'package:movly/features/auth/presentation/pages/login_page.dart';
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/preHome': (context) => const PreHomePage(),
-        /*'/home': (context) => const HomePage(),*/
+        '/home': (context) => const HomePage(),
       },
     );
   }
