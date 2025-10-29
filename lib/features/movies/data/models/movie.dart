@@ -26,6 +26,17 @@ class Movie {
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
     );
   }
+  // Convert Movie back to JSON (useful for caching or sending)
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'overview': overview,
+      'poster_path': posterPath,
+      'release_date': releaseDate,
+      'vote_average': voteAverage,
+    };
+  }
 
   /// Computed property for full poster URL
   String get posterUrl {
