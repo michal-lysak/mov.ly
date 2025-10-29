@@ -12,6 +12,7 @@ class TMDBService {
       Uri.parse('$_baseUrl/movie/popular?api_key=$_apiKey&page=$page'),
     );
 
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List results = data['results'];
@@ -20,6 +21,8 @@ class TMDBService {
       throw Exception('Failed to load popular movies: ${response.statusCode}');
     }
   }
+
+
 
   Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
     if (query.isEmpty) return [];
@@ -37,6 +40,20 @@ class TMDBService {
       return results.map((json) => Movie.fromJson(json)).toList();
     } else {
       throw Exception('Failed to search movies: ${response.statusCode}');
+    }
+  }
+
+  Future<List<Movie>> fetchSimilarMovies(int movieId, {int page = 1}) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/movie/$movieId/similar?api_key=$_apiKey&page=$page'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List results = data['results'];
+      return results.map((json) => Movie.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load similar movies: ${response.statusCode}');
     }
   }
 }
