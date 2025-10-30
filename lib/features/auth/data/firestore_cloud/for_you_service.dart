@@ -12,6 +12,7 @@ class ForYouService {
 
   StreamSubscription<QuerySnapshot>? _favoritesSubscription;
   String? _currentUserId;
+  Timer? _regenDebounce;
 
   ForYouService({
     FirebaseFirestore? firestore,
@@ -36,8 +37,8 @@ class ForYouService {
             if (movieId == null) continue;
             try {
               await _populateRelatedForMovie(movieId);
-              // Regenerate the for-you list after adding related movies
-              await generateAndSaveForYouList(userId);
+              // Debounce regeneration to avoid multiple writes
+              _scheduleRegenerateForYou(userId);
             } catch (e, st) {
               debugPrint('Error populating related for $movieId: $e');
               debugPrint('$st');
@@ -48,6 +49,13 @@ class ForYouService {
       onError: (error) => debugPrint('Favorites listener error: $error'),
       cancelOnError: false,
     );
+  }
+
+  void _scheduleRegenerateForYou(String userId, {int limit = 10}) {
+    _regenDebounce?.cancel();
+    _regenDebounce = Timer(const Duration(seconds: 2), () {
+      generateAndSaveForYouList(userId, limit: limit);
+    });
   }
 
   Future<void> _populateRelatedForMovie(int movieId) async {
@@ -75,6 +83,7 @@ class ForYouService {
         'id': m.id,
         'title': m.title,
         'overview': m.overview,
+        //TODO: connect there movie category
         'posterPath': m.posterPath,
         'releaseDate': m.releaseDate,
         'voteAverage': m.voteAverage,
@@ -91,6 +100,8 @@ class ForYouService {
     await _favoritesSubscription?.cancel();
     _favoritesSubscription = null;
     _currentUserId = null;
+    _regenDebounce?.cancel();
+    _regenDebounce = null;
   }
 
   /// Builds a personalized list of up to [limit] related movies for a user.
@@ -279,20 +290,7 @@ class ForYouService {
           .orderBy('position')
           .get();
 
-      if (snapshot.docs.isEmpty) {
-        debugPrint('ℹ️ No for-you list found for user $userId. Generating...');
-        await generateAndSaveForYouList(userId);
-
-        // Fetch again after generation
-        final newSnapshot = await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('foryoupagelist')
-            .orderBy('position')
-            .get();
-
-        return _parseForYouListFromSnapshot(newSnapshot);
-      }
+      // Do not auto-generate here to avoid duplicate writes; caller can trigger explicitly
 
       return _parseForYouListFromSnapshot(snapshot);
     } catch (e, st) {
