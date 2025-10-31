@@ -17,6 +17,7 @@ class MovieCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // possible TODO: use of gesturedetector
     return Container(
       width: 153,
       height: 245,
