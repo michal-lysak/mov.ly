@@ -66,7 +66,7 @@ class MovieCard extends StatelessWidget {
             const SizedBox(height: 5),
             Container(
               width: 143,
-              height: 43,
+              height: 48,
               alignment: Alignment.centerLeft,
               child: Text(
                 title,
@@ -74,6 +74,7 @@ class MovieCard extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  height: 1
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
