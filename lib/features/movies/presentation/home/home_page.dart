@@ -5,6 +5,7 @@ import 'package:movly/features/auth/data/firestore_cloud/for_you_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_card.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
+import 'package:movly/features/movies/presentation/widgets/navbar_btn.dart';
 
 
 
@@ -196,10 +197,9 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                   ),
+                  
                 ),
                 const SizedBox(height: 16),
-
-                //Section
               ],
             ),
           ),
@@ -217,29 +217,43 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Colors.white70),
                   ),
                 ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: '',
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              NavIcon(
+                iconLine: 'lib/assets/icons/home-line.svg',
+                iconSolid: 'lib/assets/icons/home.svg',
+                selected: _currentIndex == 0,
+                onTap: () => setState(() => _currentIndex = 0),
+              ),
+              NavIcon(
+                iconLine: 'lib/assets/icons/compass-2-line.svg',
+                iconSolid: 'lib/assets/icons/compass-2.svg',
+                selected: _currentIndex == 1,
+                onTap: () => setState(() => _currentIndex = 1),
+              ),
+              NavIcon(
+                iconLine: 'lib/assets/icons/users-line.svg',
+                iconSolid: 'lib/assets/icons/users.svg',
+                selected: _currentIndex == 2,
+                onTap: () => setState(() => _currentIndex = 2),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.search),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group_outlined),
-            activeIcon: Icon(Icons.group),
-            label: '',
-          ),
-        ],
+        ),
       ),
     );
   }
