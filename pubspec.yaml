@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^6.3.2
+  flutter_svg:  ^2.2.1
 
     # Firebase Core (required for all Firebase services)
   firebase_core: ^4.1.1
@@ -36,4 +37,5 @@ flutter:
   uses-material-design: true
   assets:
     - lib/assets/
+    - lib/assets/icons/
     - .env
