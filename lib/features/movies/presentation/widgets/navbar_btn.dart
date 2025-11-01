@@ -26,7 +26,8 @@ class NavIcon extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         child: SvgPicture.asset(
           icon,
-          width: 26,
+          width: 24,
+          height: 24,
           colorFilter: ColorFilter.mode(
             selected
                 ? Colors.black
