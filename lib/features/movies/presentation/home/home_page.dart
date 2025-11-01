@@ -23,32 +23,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title:  Text(
-          _currentIndex == 0 ? 'Mov.ly' : _currentIndex == 1 ? 'Discover' : 'Friends',
-        style: GoogleFonts.lilyScriptOne(
-          fontSize: 32,
-          fontWeight: FontWeight.normal,
-        ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                // TODO: Navigate to profile/settings
-              },
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.transparent,
-              ),
-            ),
-          ),
-        ],
-        elevation: 0,
-      ),
       body: _currentIndex == 0
           ? SingleChildScrollView(
               child: Padding(
@@ -56,6 +30,24 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 51,
+                          child: Text(
+                            'Home',
+                            style: GoogleFonts.afacad(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w500
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
               // Section For you
                 //TODO: For you page made by algorithm
               Padding(
@@ -217,8 +209,10 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Colors.white70),
                   ),
                 ),
+
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        width: double.infinity,
+        height: 63,
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           boxShadow: [
