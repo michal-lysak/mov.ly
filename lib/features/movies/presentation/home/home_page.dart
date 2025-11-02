@@ -52,13 +52,6 @@ class _HomePageState extends State<HomePage> {
                 //TODO: For you page made by algorithm
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                'For you',
-                style: GoogleFonts.afacad(
-                    fontSize: 24,
-                    //fontWeight: FontWeight.bold
-                ),
-                          ),
               ),
                 const SizedBox(height: 16),
 
