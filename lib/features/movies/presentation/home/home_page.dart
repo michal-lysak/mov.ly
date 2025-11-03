@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:movly/features/auth/data/firestore_cloud/for_you_service.dart';
-import 'package:movly/features/movies/data/models/movie.dart';
+import '../../data/models/movie.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_card.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/presentation/widgets/navbar_btn.dart';
-
-
+import '../discover/discover_tab.dart';
+import 'home_tab.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,193 +19,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _forYouService = ForYouService();
   final _tmdbService = TMDBService();
-  int _currentIndex = 0;
+  int index = 0;
+
+  final _pages = const[
+    HomeTab(),
+    DiscoverPage(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _currentIndex == 0
-          ? SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(15.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 51,
-                          child: Text(
-                            'Home',
-                            style: GoogleFonts.afacad(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w500
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-              // Section For you
-                //TODO: For you page made by algorithm
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              ),
-                const SizedBox(height: 16),
-
-                SizedBox(
-                  height: 245,
-                  child: Builder(
-                    builder: (context) {
-                      final userId = FirebaseAuth.instance.currentUser?.uid;
-                      if (userId == null) {
-                        return const Center(
-                          child: Text(
-                            'Sign in to see recommendations',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        );
-                      }
-
-                      return StreamBuilder<List<Movie>>(
-                        stream: _forYouService.streamForYouList(userId),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          final movies = snapshot.data ?? const <Movie>[];
-                          if (movies.isEmpty) {
-                            return const Center(
-                              child: Text(
-                                'No recommendations yet',
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                            );
-                          }
-
-                          return ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: movies.length,
-                            separatorBuilder: (context, index) => const SizedBox(width: 5),
-                            itemBuilder: (context, index) {
-                              final m = movies[index];
-                              final String yearStr = (m.releaseDate.isNotEmpty && m.releaseDate.contains('-'))
-                                  ? m.releaseDate.split('-').first
-                                  : (m.releaseDate.isNotEmpty ? m.releaseDate : '');
-                              final String posterUrl = m.posterPath.isNotEmpty
-                                  ? 'https://image.tmdb.org/t/p/w342${m.posterPath}'
-                                  : 'https://via.placeholder.com/286x324.png?text=No+Image';
-
-                              return MovieCard(
-                                title: m.title,
-                                posterUrl: posterUrl,
-                                year: int.tryParse(yearStr) ?? 0,
-                                category: 'Recommended',
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // New - Now Trending
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    'New',
-                    style: GoogleFonts.afacad(
-                      fontSize: 24,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 220,
-                  child: FutureBuilder<List<Movie>>(
-                    future: _tmdbService.fetchTrendingMovies(window: 'day'),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return const Center(
-                          child: Text(
-                            'Failed to load trending movies',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        );
-                      }
-                      final movies = snapshot.data ?? const <Movie>[];
-                      if (movies.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'No trending movies right now',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: movies.length,
-                        separatorBuilder: (context, index) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final m = movies[index];
-                          final String posterUrl = (m.posterPath.isNotEmpty)
-                              ? 'https://image.tmdb.org/t/p/w342${m.posterPath}'
-                              : '';
-                          return AspectRatio(
-                            aspectRatio: 2/3,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: posterUrl.isNotEmpty
-                                  ? Image.network(
-                                      posterUrl,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Container(
-                                      color: Colors.grey,
-                                      child: const Center(
-                                        child: Icon(Icons.image_not_supported, color: Colors.white54),
-                                      ),
-                                    ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        )
-          : _currentIndex == 1
-              ? const Center(
-                  child: Text(
-                    'Discover coming soon',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                )
-              : const Center(
-                  child: Text(
-                    'Friends coming soon',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ),
-
+      body: _pages[index],
       bottomNavigationBar: Container(
         width: double.infinity,
-        height: 63,
+        height: 70,
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           boxShadow: [
@@ -223,20 +50,20 @@ class _HomePageState extends State<HomePage> {
               NavIcon(
                 iconLine: 'lib/assets/icons/home-line.svg',
                 iconSolid: 'lib/assets/icons/home.svg',
-                selected: _currentIndex == 0,
-                onTap: () => setState(() => _currentIndex = 0),
+                selected: index == 0,
+                onTap: () => setState(() => index = 0),
               ),
               NavIcon(
                 iconLine: 'lib/assets/icons/compass-2-line.svg',
                 iconSolid: 'lib/assets/icons/compass-2.svg',
-                selected: _currentIndex == 1,
-                onTap: () => setState(() => _currentIndex = 1),
+                selected: index == 1,
+                onTap: () => setState(() => index = 1),
               ),
               NavIcon(
                 iconLine: 'lib/assets/icons/users-line.svg',
                 iconSolid: 'lib/assets/icons/users.svg',
-                selected: _currentIndex == 2,
-                onTap: () => setState(() => _currentIndex = 2),
+                selected: index == 2,
+                onTap: () => setState(() => index = 2),
               ),
             ],
           ),
