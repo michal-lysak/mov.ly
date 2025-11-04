@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/auth/data/firestore_cloud/favorites_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
-import 'package:movly/features/movies/presentation/widgets/cached_poster_image.dart';
+import 'package:movly/features/movies/data/cache/poster_cache.dart';
 
 import '../../auth/data/firestore_cloud/for_you_service.dart';
 
@@ -184,21 +184,21 @@ class _PreHomePageState extends State<PreHomePage> {
                           },
                           child: Stack(
                             fit: StackFit.expand,
-                            children: [
-                              CachedPosterImage.fromMovie(movie),
-                              if (isSelected)
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(12),
+                              children: [
+                                CachedPosterImage.fromMovie(movie),
+                                if (isSelected)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.favorite,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.favorite,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                            ],
+                              ]
+
                           ),
                         );
                       },
