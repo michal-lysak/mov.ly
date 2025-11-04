@@ -22,7 +22,7 @@ class _HomeTabState extends State<HomeTab> {
   // Base card size and aspect ratio (312x194 from your original)
   static const double _baseWidth = 312.0;
   static const double _baseHeight = 194.0;
-  static const double _aspect = _baseWidth / _baseHeight;
+  static const double _aspect = 16.0 / 9.0;
 
   // Scale range: center card is 1.05x, sides shrink to 0.9x
   static const double _minScale = 0.9;
@@ -117,7 +117,7 @@ class _HomeTabState extends State<HomeTab> {
                   return Column(
                     children: [
                       SizedBox(
-                        height: 210,
+                        height: 195,
                         child: PageView.builder(
                           controller: _pageController,
                           scrollDirection: Axis.horizontal,
@@ -135,18 +135,20 @@ class _HomeTabState extends State<HomeTab> {
                                     _minScale + (1 - distance) * (_maxScale - _minScale);
 
                                 // Keep height under the 210 container height
-                                final double height = (_baseHeight * scale).clamp(0, 206);
+                                final double height = (_baseHeight * scale).clamp(0, 191);
                                 final double width = height * _aspect;
 
                                 return Align(
                                   alignment: Alignment.center,
-                                  child: MovieCard(
-                                    title: movie.title,
-                                    posterUrl: movie.posterPath,
-                                    year: _extractYear(movie.releaseDate),
-                                    category: 'Recommended',
-                                    width: width,
-                                    height: height,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                                    child: MovieCard(
+                                      movie: movie,
+                                      width: width,
+                                      height: height,
+                                      isActive: (index - _currentPage).abs() < 0.3,
+                                      onTap: () {}, // optional
+                                    ),
                                   ),
                                 );
                               },
@@ -191,14 +193,5 @@ class _HomeTabState extends State<HomeTab> {
         ),
       ),
     );
-  }
-
-  int _extractYear(String releaseDate) {
-    if (releaseDate.isEmpty || releaseDate == 'Unknown') return 0;
-    try {
-      return int.parse(releaseDate.split('-')[0]);
-    } catch (_) {
-      return 0;
-    }
   }
 }
