@@ -8,18 +8,27 @@ class MovieCard extends StatelessWidget {
     required this.posterUrl,
     required this.year,
     required this.category,
+    required this.width,
+    required this.height,
   });
 
   final String title;
   final String posterUrl;
   final int year;
   final String category;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
+    // Optional: scale internal UI based on height so larger cards look balanced
+    final double titleFontSize = (height * 0.093).clamp(14.0, 22.0);
+    final double metaFontSize = (height * 0.072).clamp(12.0, 18.0);
+    final double gradientHeight = (height * 0.41).clamp(60.0, 110.0);
+
     return Container(
-      width: 312,
-      height: 194,
+      width: width,
+      height: height,
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(10),
@@ -64,7 +73,7 @@ class MovieCard extends StatelessWidget {
             left: 0,
             right: 0,
             child: Container(
-              height: 80,
+              height: gradientHeight,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -90,7 +99,7 @@ class MovieCard extends StatelessWidget {
                 Text(
                   title,
                   style: GoogleFonts.afacad(
-                    fontSize: 18,
+                    fontSize: titleFontSize,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -101,7 +110,7 @@ class MovieCard extends StatelessWidget {
                 Text(
                   year > 0 ? year.toString() : 'N/A',
                   style: GoogleFonts.afacad(
-                    fontSize: 14,
+                    fontSize: metaFontSize,
                     color: Colors.grey[300],
                   ),
                 ),
