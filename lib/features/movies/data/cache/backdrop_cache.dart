@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 
-class CachedPosterImage extends StatelessWidget {
+class CachedBackdropImage extends StatelessWidget {
   final String imageUrl;
   final double borderRadius;
   final BoxFit fit;
 
-  const CachedPosterImage({
+  const CachedBackdropImage({
     super.key,
     required this.imageUrl,
     this.borderRadius = 12,
     this.fit = BoxFit.cover,
   });
 
-  // Factory constructor to create directly from a Movie
-  factory CachedPosterImage.fromMovie(Movie movie) {
-    return CachedPosterImage(imageUrl: movie.posterUrl);
+  /// Create directly from Movie model — uses **backdropUrl**
+  factory CachedBackdropImage.fromMovie(Movie movie) {
+    return CachedBackdropImage(imageUrl: movie.backdropUrl);
   }
 
   @override
@@ -28,15 +28,15 @@ class CachedPosterImage extends StatelessWidget {
         fit: fit,
         width: double.infinity,
         height: double.infinity,
-        placeholder: (context, url) => Container(
-          color: Colors.grey[900],
+        placeholder: (_, __) => Container(
+          color: Colors.black12,
           child: const Center(
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.grey[800],
-          child: const Icon(Icons.movie, color: Colors.grey, size: 48),
+        errorWidget: (_, __, ___) => Container(
+          color: Colors.black26,
+          child: const Icon(Icons.landscape, color: Colors.white38, size: 46),
         ),
       ),
     );
