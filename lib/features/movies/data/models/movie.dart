@@ -2,7 +2,8 @@ class Movie {
   final int id;
   final String title;
   final String overview;
-  final String posterPath;
+  final String? posterPath;    // optional
+  final String? backdropPath;  // optional
   final String releaseDate;
   final double voteAverage;
 
@@ -10,44 +11,94 @@ class Movie {
     required this.id,
     required this.title,
     required this.overview,
-    required this.posterPath,
+    this.posterPath,
+    this.backdropPath,
     required this.releaseDate,
     required this.voteAverage,
   });
 
-  // Factory constructor: create movie into a Movie from a JSON map
   factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
       id: json['id'] as int,
-      title: (json['title'] ?? 'Untitled'),
-      overview: (json['overview'] ?? '') as String,
-      posterPath: (json['poster_path'] ?? '') as String,
-      releaseDate: (json['release_date'] ?? 'Unknown') as String,
+      title: json['title'] ?? 'Untitled',
+      overview: json['overview'] ?? '',
+      posterPath: json['poster_path'],
+      backdropPath: json['backdrop_path'],
+      releaseDate: json['release_date'] ?? 'Unknown',
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
     );
   }
-  // Convert Movie back to JSON (useful for caching or sending)
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'overview': overview,
       'poster_path': posterPath,
+      'backdrop_path': backdropPath,
       'release_date': releaseDate,
       'vote_average': voteAverage,
     };
   }
 
-  /// Computed property for full poster URL
-  String get posterUrl {
-    if (posterPath.isEmpty) {
-      return 'https://via.placeholder.com/300x450?text=No+Image';
+  /// Single universal image URL preference: Backdrop → Poster → Placeholder
+  String get imageUrl {
+    const base = 'https://image.tmdb.org/t/p';
+
+    if (backdropPath != null && backdropPath!.isNotEmpty) {
+      return '$base/w780$backdropPath'; // landscape
     }
-    return 'https://image.tmdb.org/t/p/w185$posterPath';
+
+    if (posterPath != null && posterPath!.isNotEmpty) {
+      return '$base/w342$posterPath'; // portrait fallback
+    }
+
+    return 'https://via.placeholder.com/600x400?text=No+Image';
   }
 
-  @override
-  String toString() {
-    return 'Movie(id: $id, title: $title, voteAverage: $voteAverage)';
+  /// Forces using backdrop only, fallback to poster, finally placeholder
+  String get backdropUrl {
+    const base = 'https://image.tmdb.org/t/p';
+
+    if (backdropPath != null && backdropPath!.isNotEmpty) {
+      return '$base/w780$backdropPath';
+    }
+
+    if (posterPath != null && posterPath!.isNotEmpty) {
+      return '$base/w342$posterPath';
+    }
+
+    return 'https://via.placeholder.com/1280x720?text=No+Backdrop';
   }
+
+  String get cardImageUrl {
+    const base = 'https://image.tmdb.org/t/p/w780';
+
+    if (backdropPath != null && backdropPath!.isNotEmpty) {
+      return '$base$backdropPath';
+    }
+
+    // fallback if no backdrop exists
+    return 'https://via.placeholder.com/1280x720?text=No+Backdrop';
+  }
+
+  /// Forces using poster only, fallback to backdrop, then placeholder
+  String get posterUrl {
+    const base = 'https://image.tmdb.org/t/p';
+
+    if (posterPath != null && posterPath!.isNotEmpty) {
+      return '$base/w342$posterPath'; // portrait
+    }
+
+    if (backdropPath != null && backdropPath!.isNotEmpty) {
+      return '$base/w780$backdropPath'; // fallback landscape if no poster exists
+    }
+
+    return 'https://via.placeholder.com/400x600?text=No+Poster';
+  }
+
+
+
+  @override
+  String toString() => 'Movie(id: $id, title: $title)';
 }
