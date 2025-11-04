@@ -1,123 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:movly/features/movies/data/models/movie.dart';
 
 class MovieCard extends StatelessWidget {
   const MovieCard({
     super.key,
-    required this.title,
-    required this.posterUrl,
-    required this.year,
-    required this.category,
+    required this.movie,
     required this.width,
     required this.height,
+    this.isActive = false,
+    this.onTap,
   });
 
-  final String title;
-  final String posterUrl;
-  final int year;
-  final String category;
+  final Movie movie;
   final double width;
   final double height;
 
+  final bool isActive;
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    // Optional: scale internal UI based on height so larger cards look balanced
+    final double scale = isActive ? 1.0 : 0.87;
     final double titleFontSize = (height * 0.093).clamp(14.0, 22.0);
     final double metaFontSize = (height * 0.072).clamp(12.0, 18.0);
     final double gradientHeight = (height * 0.41).clamp(60.0, 110.0);
 
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Movie Poster
-          Image.network(
-            'https://image.tmdb.org/t/p/w500$posterUrl',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: Colors.grey[900],
-                child: const Icon(
-                  Icons.movie,
-                  color: Colors.grey,
-                  size: 48,
+    return AnimatedScale(
+      scale: scale,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOut,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: width,
+          height: height,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Backdrop only — pure cinema
+              Image.network(
+                movie.cardImageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey[900],
+                  child: const Icon(Icons.movie, color: Colors.grey, size: 48),
                 ),
-              );
-            },
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                color: Colors.grey[900],
-                child: Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                        : null,
+              ),
+
+
+              // Fade for text readability
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.82),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
 
-          // Gradient overlay for better text readability
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: gradientHeight,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.8),
+              // Title + Year
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      movie.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.afacad(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      movie.releaseDate.isNotEmpty
+                          ? movie.releaseDate.split('-').first
+                          : "N/A",
+                      style: GoogleFonts.afacad(
+                        fontSize: metaFontSize,
+                        color: Colors.grey[300],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-
-          // Movie Info
-          Positioned(
-            bottom: 12,
-            left: 12,
-            right: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.afacad(
-                    fontSize: titleFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  year > 0 ? year.toString() : 'N/A',
-                  style: GoogleFonts.afacad(
-                    fontSize: metaFontSize,
-                    color: Colors.grey[300],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
