@@ -12,6 +12,15 @@ class ForYouService {
   String? _currentUserId;
   Timer? _regenDebounce;
 
+  // TMDB image base URL
+  static const String _tmdbImageBase = 'https://image.tmdb.org/t/p/w500';
+
+  /// Convert relative path to full URL
+  String _getFullImageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    return '$_tmdbImageBase$path';
+  }
+
   ForYouService({
     FirebaseFirestore? firestore,
     TMDBService? tmdbService,
@@ -76,8 +85,8 @@ class ForYouService {
         'id': m.id,
         'title': m.title,
         'overview': m.overview,
-        'posterPath': m.posterPath,
-        'backdropPath': m.backdropPath, // ✅ added
+        'posterPath': _getFullImageUrl(m.posterPath),
+        'backdropPath': _getFullImageUrl(m.backdropPath),
         'releaseDate': m.releaseDate,
         'voteAverage': m.voteAverage,
         'createdAt': FieldValue.serverTimestamp(),
@@ -134,8 +143,8 @@ class ForYouService {
         final double voteAverage = (data['voteAverage'] ?? 0).toDouble();
         final String title = (data['title'] ?? '') as String;
         final String overview = (data['overview'] ?? '') as String;
-        final String? posterPath = data['posterPath'];
-        final String? backdropPath = data['backdropPath'];
+        final String? posterPath = data['posterPath'] as String?;
+        final String? backdropPath = data['backdropPath'] as String?;
         final String releaseDate = data['releaseDate'] ?? 'Unknown';
 
         final existing = relatedById[relatedId];
