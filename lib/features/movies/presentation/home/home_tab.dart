@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:movly/features/constants/spacing.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/auth/data/firestore_cloud/for_you_service.dart';
+import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
@@ -14,27 +16,8 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   final ForYouService _forYouService = ForYouService();
-  final PageController _pageController = PageController(
-    initialPage: 0,
-    viewportFraction: 0.7,
-  );
-
-  // Base card size and aspect ratio (312x194 from your original)
-  static const double _baseWidth = 312.0;
-  static const double _baseHeight = 194.0;
-  static const double _aspect = 16.0 / 9.0;
-
-  // Scale range: center card is 1.05x, sides shrink to 0.9x
-  static const double _minScale = 0.9;
-  static const double _maxScale = 1.05;
-
-  // Convenience getter for current page (handles not-attached state)
-  double get _currentPage {
-    if (!_pageController.hasClients) {
-      return _pageController.initialPage.toDouble();
-    }
-    return _pageController.page ?? _pageController.initialPage.toDouble();
-  }
+  final TMDBService _tmdbService = TMDBService();
+  final PageController _pageController = PageController(viewportFraction: 0.8);
 
   @override
   void dispose() {
@@ -53,14 +36,20 @@ class _HomeTabState extends State<HomeTab> {
       );
     }
 
+    // Calculate card dimensions for 16:9 aspect ratio
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth * 0.8; // 80% of screen width
+    final cardHeight = cardWidth / (16.0 / 9.0); // 16:9 aspect ratio
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Padded text section
+              // Header section
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 50),
+                padding: const EdgeInsets.fromLTRB(15, 20, 15, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -74,14 +63,15 @@ class _HomeTabState extends State<HomeTab> {
                   ],
                 ),
               ),
-              // Landscape carousel at top
+
+              // Movie carousel with center snapping
               StreamBuilder<List<Movie>>(
                 stream: _forYouService.streamForYouList(user.uid),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox(
-                      height: 210,
-                      child: Center(
+                    return SizedBox(
+                      height: cardHeight + 40,
+                      child: const Center(
                         child: CircularProgressIndicator(),
                       ),
                     );
@@ -89,7 +79,7 @@ class _HomeTabState extends State<HomeTab> {
 
                   if (snapshot.hasError) {
                     return SizedBox(
-                      height: 210,
+                      height: cardHeight + 40,
                       child: Center(
                         child: Text('Error: ${snapshot.error}'),
                       ),
@@ -100,7 +90,7 @@ class _HomeTabState extends State<HomeTab> {
 
                   if (movies.isEmpty) {
                     return SizedBox(
-                      height: 210,
+                      height: cardHeight + 40,
                       child: Center(
                         child: Padding(
                           padding: const EdgeInsets.all(32.0),
@@ -114,84 +104,119 @@ class _HomeTabState extends State<HomeTab> {
                     );
                   }
 
-                  return Column(
-                    children: [
-                      SizedBox(
-                        height: 195,
-                        child: PageView.builder(
-                          controller: _pageController,
-                          scrollDirection: Axis.horizontal,
-                          pageSnapping: true,
-                          itemCount: movies.length,
-                          itemBuilder: (context, index) {
-                            final movie = movies[index];
+                  return SizedBox(
+                    height: cardHeight + 40,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      padEnds: true,
+                      itemCount: movies.length,
+                      itemBuilder: (context, index) {
+                        final movie = movies[index];
 
-                            return AnimatedBuilder(
-                              animation: _pageController,
-                              builder: (context, child) {
-                                final double distance =
-                                (index - _currentPage).abs().clamp(0.0, 1.0);
-                                final double scale =
-                                    _minScale + (1 - distance) * (_maxScale - _minScale);
-
-                                // Keep height under the 210 container height
-                                final double height = (_baseHeight * scale).clamp(0, 191);
-                                final double width = height * _aspect;
-
-                                return Align(
-                                  alignment: Alignment.center,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                                    child: MovieCard(
-                                      movie: movie,
-                                      width: width,
-                                      height: height,
-                                      isActive: (index - _currentPage).abs() < 0.3,
-                                      onTap: () {}, // optional
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      // Page indicator using the same controller (no ephemeral notifiers)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        child: AnimatedBuilder(
-                          animation: _pageController,
-                          builder: (context, _) {
-                            final int current = _currentPage.round();
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(
-                                movies.length,
-                                    (index) => AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                                  width: current == index ? 12 : 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: current == index
-                                        ? Colors.white
-                                        : Colors.grey.withOpacity(0.5),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          child: MovieCard(
+                            movie: movie,
+                            width: cardWidth,
+                            height: cardHeight,
+                            isActive: true,
+                            onTap: () {
+                              // Handle card tap
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               ),
+
+              const SizedBox(height: 20),
+
+              // Fresh Finds section
+              FutureBuilder<List<Movie>>(
+                future: _tmdbService.fetchPopularMovies(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox.shrink();
+                  }
+                  if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return _buildMoviesHorizontalList(
+                    "Fresh Finds",
+                    snapshot.data!,
+                    cardWidth: (screenWidth * 0.4).clamp(150.0, 200.0),
+                    cardHeight: (screenWidth * 0.4 * (3.0 / 2.0)).clamp(225.0, 300.0),
+                    horizontalPadding: 15.0, // Adjust left padding
+                    itemSpacing: kPosterSpacing, // Adjust spacing between cards
+                    titlePadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10), // Adjust title padding
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMoviesHorizontalList(
+      String title,
+      List<Movie> movies, {
+        double? cardWidth,
+        double? cardHeight,
+        double horizontalPadding = 15.0,
+        double itemSpacing = 15.0,
+        EdgeInsetsGeometry titlePadding = const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Use provided values or calculate defaults
+    final double finalCardWidth = cardWidth ?? (screenWidth * 0.4).clamp(150.0, 200.0);
+    final double finalCardHeight = cardHeight ?? finalCardWidth * (3.0 / 2.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title with adjustable padding
+        Padding(
+          padding: titlePadding,
+          child: Text(
+            title,
+            style: GoogleFonts.afacad(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+
+        // Horizontal list with adjustable spacing
+        SizedBox(
+          height: finalCardHeight,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: movies.length,
+            padding: EdgeInsets.only(left: horizontalPadding),
+            itemBuilder: (context, index) {
+              final movie = movies[index];
+              return Padding(
+                padding: EdgeInsets.only(right: itemSpacing),
+                child: MovieCard(
+                  movie: movie,
+                  width: finalCardWidth,
+                  height: finalCardHeight,
+                  onTap: () {
+                    // Handle tap
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
