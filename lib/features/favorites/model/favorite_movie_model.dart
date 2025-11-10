@@ -1,27 +1,25 @@
+// Favorite movie reference, global database counter for each movie
 class FavoriteMovieRef {
   final int movieId;
   final List<String> keywords;
-  final DateTime favoritedAt;
 
   FavoriteMovieRef({
     required this.movieId,
     required this.keywords,
-    required this.favoritedAt,
   });
 
   Map<String, dynamic> toMap() => {
     'id': movieId,
     'keywords': keywords,
-    'favoritedAt': favoritedAt.toIso8601String(),
   };
 
   factory FavoriteMovieRef.fromMap(Map<String, dynamic> map) => FavoriteMovieRef(
     movieId: map['id'],
     keywords: List<String>.from(map['keywords']),
-    favoritedAt: DateTime.parse(map['favoritedAt']),
   );
 }
 
+// User's personal database, favorite movies
 class FavoriteMoviesProfile {
   final bool isPublic;
   final List<FavoriteMovieRef> favorites;

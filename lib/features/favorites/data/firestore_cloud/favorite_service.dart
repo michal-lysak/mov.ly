@@ -1,72 +1,64 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../movies/data/services/tmdb_service.dart';
-import '../../model/favorite_movie_model.dart';
-import 'favmovie_service.dart';
 
 class FavoriteService {
   final _db = FirebaseFirestore.instance;
-  final _favMovieService = FavMovieService();
-  final _tmdbService = TMDBService(); // reads API from .env
+  final _tmdb = TMDBService();
 
-  /// Add favorite movie to user
-  Future<void> addFavoriteMovie(String userId, int movieId) async {
-    List<String> keywords = await _getKeywords(movieId);
+  /// Ensure movie exists globally with keywords and counter
+  Future<void> _ensureMovieExists(int movieId) async {
+    final ref = _db.collection('favoritemovies').doc(movieId.toString());
+    final snap = await ref.get();
 
-    final favoriteRef = FavoriteMovieRef(
-      movieId: movieId,
-      keywords: keywords,
-      favoritedAt: DateTime.now(),
-    );
+    if (!snap.exists || (snap.data()?['keywords'] == null)) {
+      final keywords = await _tmdb.fetchMovieKeywords(movieId);
 
-    final userDocRef = _db.collection('favoritesperuser').doc(userId);
+      await ref.set({
+        'keywords': keywords,
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'favoritesCount': FieldValue.increment(0),
+      }, SetOptions(merge: true));
+    }
+  }
 
-    // Add movie to user's favorites
-    await userDocRef.set({
+  /// Favorite movie (global + user)
+  Future<void> favoriteMovie(String userId, int movieId) async {
+    await _ensureMovieExists(movieId);
+
+    // Increment global counter
+    await _db.collection('favoritemovies')
+        .doc(movieId.toString())
+        .update({'favoritesCount': FieldValue.increment(1)});
+
+    // Add movie to user's list (store only ID & timestamp)
+    final userRef = _db.collection('favoritesperuser').doc(userId);
+
+    await userRef.set({
       'isPublic': true,
-      'favorites': FieldValue.arrayUnion([favoriteRef.toMap()])
+      'favorites': FieldValue.arrayUnion([
+        {
+          'id': movieId,
+          'favoritedAt': DateTime.now().toIso8601String(),
+        }
+      ])
     }, SetOptions(merge: true));
-
-    // Ensure movie exists globally and increment likeCount
-    await _favMovieService.addOrUpdateMovie(movieId, keywords);
-    await _favMovieService.incrementLike(movieId);
   }
 
-  /// Remove favorite movie
-  Future<void> removeFavoriteMovie(String userId, int movieId) async {
-    final userDocRef = _db.collection('favoritesperuser').doc(userId);
-    final snapshot = await userDocRef.get();
-    if (!snapshot.exists) return;
+  /// Unfavorite movie
+  Future<void> unfavoriteMovie(String userId, int movieId) async {
+    // Remove from user
+    final userRef = _db.collection('favoritesperuser').doc(userId);
+    final snap = await userRef.get();
 
-    final favorites = (snapshot.data()?['favorites'] as List<dynamic>? ?? []);
-    final updated = favorites.where((f) => f['id'] != movieId).toList();
+    if (snap.exists) {
+      final favorites = List<Map>.from(snap.data()?['favorites'] ?? []);
+      final updated = favorites.where((item) => item['id'] != movieId).toList();
+      await userRef.update({'favorites': updated});
+    }
 
-    await userDocRef.update({'favorites': updated});
-    await _favMovieService.decrementLike(movieId);
-  }
-
-  /// Toggle public/private
-  Future<void> setPublicStatus(String userId, bool isPublic) async {
-    await _db.collection('favoritesperuser').doc(userId)
-        .set({'isPublic': isPublic}, SetOptions(merge: true));
-  }
-
-  /// Get user's favorites
-  Future<FavoriteMoviesProfile?> getFavorites(String userId) async {
-    final doc = await _db.collection('favoritesperuser').doc(userId).get();
-    if (!doc.exists) return null;
-    return FavoriteMoviesProfile.fromMap(doc.data()!);
-  }
-
-  /// Private: get keywords (from global collection or TMDB)
-  Future<List<String>> _getKeywords(int movieId) async {
-    List<String> keywords = await _favMovieService.getKeywords(movieId);
-    if (keywords.isNotEmpty) return keywords;
-
-    // Fetch from TMDB if missing
-    keywords = await _tmdbService.fetchMovieKeywords(movieId);
-
-    // Store in global collection
-    await _favMovieService.addOrUpdateMovie(movieId, keywords);
-    return keywords;
+    // Decrement global counter
+    await _db.collection('favoritemovies')
+        .doc(movieId.toString())
+        .update({'favoritesCount': FieldValue.increment(-1)});
   }
 }
