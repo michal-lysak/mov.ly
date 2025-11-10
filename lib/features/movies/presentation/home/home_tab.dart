@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:movly/features/constants/spacing.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
-import 'package:movly/features/auth/data/firestore_cloud/for_you_service.dart';
+import 'package:movly/features/favorites/model/favorite_movie_model.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import '../widgets/movie_card.dart';
 

@@ -58,17 +58,29 @@ class TMDBService {
     }
   }
 
-  Future<List<Movie>> fetchSimilarMovies(int movieId, {int page = 1}) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/movie/$movieId/similar?api_key=$_apiKey&page=$page'),
+  Future<List<String>> fetchMovieKeywords(int movieId) async {
+    final url = Uri.parse(
+      'https://api.themoviedb.org/3/movie/$movieId/keywords?api_key=$_apiKey',
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List results = data['results'];
-      return results.map((json) => Movie.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load similar movies: ${response.statusCode}');
+    final response = await http.get(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load keywords: ${response.body}');
     }
+
+    final data = jsonDecode(response.body);
+
+    // Extract keyword names
+    final keywords = (data['keywords'] as List<dynamic>)
+        .map((k) => k['name'].toString())
+        .toList();
+
+    // Return at most 3
+    if (keywords.length > 3) {
+      return keywords.sublist(0, 3);
+    }
+
+    return keywords;
   }
 }

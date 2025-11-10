@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
 
       theme: lightMode,
       // Start on the login page
-      initialRoute: '/login',
+      initialRoute: '/preHome',
       routes: {
         '/login': (context) => const LoginPage(),
         '/preHome': (context) => const PreHomePage(),
