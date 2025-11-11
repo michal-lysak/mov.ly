@@ -113,99 +113,128 @@ class _PreHomePageState extends State<PreHomePage> {
 
   // ------ UI ------
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 25),
-            SafeArea(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Mov.ly',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.lilyScriptOne(fontSize: 30),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 50),
-                      child: Text(
-                        'Select your favorite movies',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.kronaOne(fontSize: 24),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshMovies,
-                child: Stack(
-                  children: [
-                    GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(17),
-                      gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 6,
-                        crossAxisSpacing: 6,
-                        childAspectRatio: 0.7,
-                      ),
-                      itemCount: _currentMovies.length + (_hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _currentMovies.length) {
-                          return _isLoading
-                              ? const Center(child: CircularProgressIndicator())
-                              : const SizedBox.shrink();
-                        }
-
-                        final movie = _currentMovies[index];
-
-                        return GestureDetector(
-                          onTap: () => _toggleFavorite(movie.id),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              CachedPosterImage.fromMovie(movie),
-                            ],
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: 25),
+                SafeArea(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Mov.ly',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.lilyScriptOne(fontSize: 30),
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(horizontal: 50),
+                          child: Text(
+                            'Select your favorite movies',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.kronaOne(fontSize: 24),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: 140,
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withOpacity(0.8),
-                              ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _refreshMovies,
+                    child: Stack(
+                      children: [
+                        GridView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(17),
+                          gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 6,
+                            crossAxisSpacing: 6,
+                            childAspectRatio: 0.7,
+                          ),
+                          itemCount: _currentMovies.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _currentMovies.length) {
+                              return _isLoading
+                                  ? const Center(child: CircularProgressIndicator())
+                                  : const SizedBox.shrink();
+                            }
+
+                            final movie = _currentMovies[index];
+
+                            return GestureDetector(
+                              onTap: () => _toggleFavorite(movie.id),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  CachedPosterImage.fromMovie(movie),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 140,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.8),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Floating button: Continue
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 32,
+            child: Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/home');
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 38, vertical: 16),
+                  child: Text("Continue"),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
