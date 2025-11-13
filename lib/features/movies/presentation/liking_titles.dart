@@ -22,18 +22,14 @@ class _PreHomePageState extends State<PreHomePage> {
   bool _isLoading = false;
   bool _hasMore = true;
 
-  // List of movies currently displayed (fetched per page)
   List<Movie> _currentMovies = [];
+  Set<int> _selectedMovieIds = {}; // <- track selected movies
 
   @override
   void initState() {
     super.initState();
     _fetchMovies();
     _scrollController.addListener(_onScroll);
-  }
-
-  void _startForYouListener(String userId) {
-    //forYouService.startListeningForUser(userId);
   }
 
   void _onScroll() {
@@ -47,10 +43,8 @@ class _PreHomePageState extends State<PreHomePage> {
     }
   }
 
-  /// Fetch next page of movies from TMDB
   Future<void> _fetchMovies() async {
     if (_isLoading || !_hasMore) return;
-
     setState(() => _isLoading = true);
 
     try {
@@ -77,26 +71,32 @@ class _PreHomePageState extends State<PreHomePage> {
     }
   }
 
-  /// Pull-to-refresh movies
   Future<void> _refreshMovies() async {
     setState(() {
       _currentMovies.clear();
       _currentPage = 1;
       _hasMore = true;
+      _selectedMovieIds.clear(); // clear selection on refresh
     });
     await _fetchMovies();
   }
 
-  /// Toggle favorite for a single movie
   Future<void> _toggleFavorite(int movieId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
     try {
-      await favoriteService.favoriteMovie(userId, movieId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Movie favorited!')),
-      );
+      if (_selectedMovieIds.contains(movieId)) {
+        await favoriteService.unfavoriteMovie(userId, movieId);
+        setState(() {
+          _selectedMovieIds.remove(movieId);
+        });
+      } else {
+        await favoriteService.favoriteMovie(userId, movieId);
+        setState(() {
+          _selectedMovieIds.add(movieId);
+        });
+      }
     } catch (e) {
       debugPrint('Error favoriting movie: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,107 +111,110 @@ class _PreHomePageState extends State<PreHomePage> {
     super.dispose();
   }
 
-  // ------ UI ------
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          Center(
-            child: Column(
-              children: [
-                const SizedBox(height: 25),
-                SafeArea(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Mov.ly',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.lilyScriptOne(fontSize: 30),
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.symmetric(horizontal: 50),
-                          child: Text(
-                            'Select your favorite movies',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.kronaOne(fontSize: 24),
-                          ),
-                        ),
-                      ],
+          Column(
+            children: [
+              const SizedBox(height: 25),
+              SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Mov.ly',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lilyScriptOne(fontSize: 30),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 50),
+                      child: Text(
+                        'Select your favorite movies',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.kronaOne(fontSize: 24),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _refreshMovies,
-                    child: Stack(
-                      children: [
-                        GridView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(17),
-                          gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            mainAxisSpacing: 6,
-                            crossAxisSpacing: 6,
-                            childAspectRatio: 0.7,
-                          ),
-                          itemCount: _currentMovies.length + (_hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _currentMovies.length) {
-                              return _isLoading
-                                  ? const Center(child: CircularProgressIndicator())
-                                  : const SizedBox.shrink();
-                            }
-
-                            final movie = _currentMovies[index];
-
-                            return GestureDetector(
-                              onTap: () => _toggleFavorite(movie.id),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CachedPosterImage.fromMovie(movie),
-                                ],
-                              ),
-                            );
-                          },
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refreshMovies,
+                  child: Stack(
+                    children: [
+                      GridView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(17),
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 6,
+                          crossAxisSpacing: 6,
+                          childAspectRatio: 0.7,
                         ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 140,
-                          child: IgnorePointer(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.8),
-                                  ],
-                                ),
+                        itemCount: _currentMovies.length + (_hasMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _currentMovies.length) {
+                            return _isLoading
+                                ? const Center(child: CircularProgressIndicator())
+                                : const SizedBox.shrink();
+                          }
+
+                          final movie = _currentMovies[index];
+
+                          return GestureDetector(
+                            onTap: () => _toggleFavorite(movie.id),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                CachedPosterImage.fromMovie(movie),
+                                if (_selectedMovieIds.contains(movie.id))
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.favorite,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 140,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.8),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          // Floating button: Continue
           Positioned(
             left: 0,
             right: 0,
