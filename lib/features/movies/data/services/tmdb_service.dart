@@ -84,6 +84,20 @@ class TMDBService {
     return keywords;
   }
 
+  Future<Movie?> fetchMovieById(String movieId) async {
+    final url = Uri.parse('$_baseUrl/movie/$movieId?api_key=$_apiKey');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return Movie.fromJson(data);
+    } else {
+      print("Failed to fetch movie $movieId");
+      return null;
+    }
+  }
+
+
   Future<List<Movie>> discoverByKeyword({required String keyword}) async {
     try {
       final url = Uri.parse(
