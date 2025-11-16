@@ -1,72 +1,98 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../model/favorite_movie_model.dart';
-import 'favmovie_service.dart';
-import 'favorite_service.dart';
+import 'package:movly/features/movies/data/models/movie.dart';
+import 'package:movly/features/movies/data/services/tmdb_service.dart';
 
 class ForYouPageService {
   final _db = FirebaseFirestore.instance;
-  final _favMovieService = FavMovieService();
-  final _favoriteService = FavoriteService();
+  final _tmdb = TMDBService();
 
-  /// Update recommendations for a user
-  Future<void> updateRecommendations(String userId, List<FavoriteMovieRef> recommendedMovies) async {
-    final docRef = _db.collection('foryoupage').doc(userId);
-
-    await docRef.set({
-      'lastUpdated': FieldValue.serverTimestamp(),
-      'recommendedMovies': recommendedMovies.map((f) => f.toMap()).toList(),
-    }, SetOptions(merge: true));
+  /// Stream only IDs for poster carousel
+  Stream<List<String>> streamForYouList(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('foryoupagelist')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => d['id'].toString()).toList());
   }
 
-  /// Get recommendations for a user
-  Future<List<FavoriteMovieRef>> getRecommendations(String userId) async {
-    final doc = await _db.collection('foryoupage').doc(userId).get();
-    if (!doc.exists) return [];
+  /// Generate For You movies (store only IDs)
+  Future<void> generateForYouMovies(String uid) async {
+    try {
+      // Latest 10 favorites
+      final latest = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('favoritesperuser')
+          .orderBy('addedAt', descending: true)
+          .limit(10)
+          .get();
 
-    final movies = (doc.data()?['recommendedMovies'] as List<dynamic>? ?? []);
-    return movies.map((e) => FavoriteMovieRef.fromMap(e)).toList();
-  }
+      // Older 5 favorites
+      final lastLatest = latest.docs.isNotEmpty
+          ? (latest.docs.last['addedAt'] as Timestamp).toDate()
+          : DateTime.now();
 
-  /// Generate recommendations based on user favorites and global movie likes
-  Future<List<FavoriteMovieRef>> generateRecommendations(String userId, {int limit = 10}) async {
-    // Get user favorites
-    final profile = await _favoriteService.getFavorites(userId);
-    if (profile == null) return [];
+      final older = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('favoritesperuser')
+          .where('addedAt', isLessThan: lastLatest)
+          .limit(5)
+          .get();
 
-    final keywordCount = <String, int>{};
+      final movieIds = [
+        ...latest.docs.map((d) => d['movieId'].toString()),
+        ...older.docs.map((d) => d['movieId'].toString()),
+      ];
 
-    // Count keywords from user's favorites weighted by global likeCount
-    for (final fav in profile.favorites) {
-      final likeCount = await _favMovieService.getLikeCount(fav.movieId);
-      for (final kw in fav.keywords) {
-        keywordCount[kw] = (keywordCount[kw] ?? 0) + likeCount;
+      if (movieIds.isEmpty) return;
+
+      // Pick ONE keyword per movie
+      final keywordDocs = await Future.wait(
+        movieIds.map((id) => _db.collection('favoritemovies').doc(id).get()),
+      );
+
+      final keywords = <String>[];
+      for (var doc in keywordDocs) {
+        if (!doc.exists) continue;
+        final List<dynamic> k = doc['keywords'];
+        if (k.isNotEmpty) {
+          k.shuffle();
+          keywords.add(k.first);
+        }
       }
+
+      if (keywords.isEmpty) return;
+
+      final searchKeywords = keywords.take(5).toList();
+
+      // Discover movies from TMDB
+      final discovered = <String>[];
+      for (final kw in searchKeywords) {
+        final results = await _tmdb.discoverByKeyword(keyword: kw);
+        discovered.addAll(results.map((m) => m.id.toString()).take(5));
+      }
+
+      // Remove duplicates
+      final unique = discovered.toSet().toList();
+
+      // Save only IDs
+      final col =
+      _db.collection('users').doc(uid).collection('foryoupagelist');
+
+      for (var id in unique) {
+        await col.doc(id).set({
+          'id': id,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print("ForYou generation error: $e");
     }
-
-    // Fetch all movies from /favoritemovies
-    final snapshot = await FirebaseFirestore.instance.collection('favoritemovies').get();
-    final movies = snapshot.docs.map((doc) {
-      final data = doc.data();
-      final id = int.parse(doc.id);
-      final keywords = List<String>.from(data['keywords'] ?? []);
-      final likeCount = data['likeCount'] ?? 0;
-
-      // Calculate a simple score based on shared keywords
-      int score = 0;
-      for (final kw in keywords) {
-        score += keywordCount[kw] ?? 0;
-      }
-
-      return FavoriteMovieRef(
-        movieId: id,
-        keywords: keywords,
-        favoritedAt: DateTime.now(), // just for structure
-      )..score = score;
-    }).toList();
-
-    // Sort by score descending
-    movies.sort((a, b) => (b.score ?? 0).compareTo(a.score ?? 0));
-
-    return movies.take(limit).toList();
   }
+
+  void dispose() {}
 }

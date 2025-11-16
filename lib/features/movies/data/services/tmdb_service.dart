@@ -83,4 +83,54 @@ class TMDBService {
 
     return keywords;
   }
+
+  Future<List<Movie>> discoverByKeyword({required String keyword}) async {
+    try {
+      final url = Uri.parse(
+        '$_baseUrl/search/keyword?api_key=$_apiKey&query=$keyword',
+      );
+
+      final keywordResponse = await http.get(url);
+
+      if (keywordResponse.statusCode != 200) {
+        print("TMDB keyword search failed: ${keywordResponse.body}");
+        return [];
+      }
+
+      final keywordJson = jsonDecode(keywordResponse.body);
+
+      // If no keyword found → return nothing
+      if (keywordJson['results'] == null || keywordJson['results'].isEmpty) {
+        return [];
+      }
+
+      final int keywordId = keywordJson['results'][0]['id'];
+
+      // Now discover movies using this keyword ID
+      final discoverUrl = Uri.parse(
+        '$_baseUrl/discover/movie?api_key=$_apiKey&with_keywords=$keywordId&sort_by=popularity.desc',
+      );
+
+      final discoverResponse = await http.get(discoverUrl);
+
+      if (discoverResponse.statusCode != 200) {
+        print("TMDB discover failed: ${discoverResponse.body}");
+        return [];
+      }
+
+      final discoverJson = jsonDecode(discoverResponse.body);
+
+      final List<Movie> movies = [];
+
+      for (var item in discoverJson['results']) {
+        movies.add(Movie.fromJson(item));
+      }
+
+      return movies;
+    } catch (e) {
+      print("discoverByKeyword error: $e");
+      return [];
+    }
+  }
+
 }

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:movly/features/constants/spacing.dart';
-import 'package:movly/features/movies/data/models/movie.dart';
-import 'package:movly/features/favorites/model/favorite_movie_model.dart';
+import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import '../widgets/movie_card.dart';
 
@@ -15,9 +14,29 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  final ForYouService _forYouService = ForYouService();
   final TMDBService _tmdbService = TMDBService();
   final PageController _pageController = PageController(viewportFraction: 0.8);
+  final ForYouPageService _forYouService = ForYouPageService();
+
+  bool _didGenerate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tryGenerateForYou();
+  }
+
+  Future<void> _tryGenerateForYou() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot = await _forYouService.streamForYouList(user.uid).first;
+
+    if (!_didGenerate && snapshot.isEmpty) {
+      _didGenerate = true;
+      await _forYouService.generateForYouMovies(user.uid);
+    }
+  }
 
   @override
   void dispose() {
@@ -29,17 +48,15 @@ class _HomeTabState extends State<HomeTab> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       return const Scaffold(
         body: Center(child: Text('Please log in')),
       );
     }
 
-    // Calculate card dimensions for 16:9 aspect ratio
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth * 0.8; // 80% of screen width
-    final cardHeight = cardWidth / (16.0 / 9.0); // 16:9 aspect ratio
+    final cardWidth = screenWidth * 0.8;
+    final cardHeight = cardWidth / (16.0 / 9.0);
 
     return Scaffold(
       body: SafeArea(
@@ -47,48 +64,39 @@ class _HomeTabState extends State<HomeTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header section
+              // HEADER
               Padding(
                 padding: const EdgeInsets.fromLTRB(15, 20, 15, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Home',
-                      style: GoogleFonts.afacad(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Home',
+                  style: GoogleFonts.afacad(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
 
-              // Movie carousel with center snapping
-              StreamBuilder<List<Movie>>(
+              // FOR YOU CAROUSEL
+              StreamBuilder<List<String>>(
                 stream: _forYouService.streamForYouList(user.uid),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return SizedBox(
                       height: cardHeight + 40,
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                      child: const Center(child: CircularProgressIndicator()),
                     );
                   }
 
                   if (snapshot.hasError) {
                     return SizedBox(
                       height: cardHeight + 40,
-                      child: Center(
-                        child: Text('Error: ${snapshot.error}'),
-                      ),
+                      child: Center(child: Text('Error: ${snapshot.error}')),
                     );
                   }
 
-                  final movies = snapshot.data ?? [];
+                  final movieIds = snapshot.data ?? [];
 
-                  if (movies.isEmpty) {
+                  if (movieIds.isEmpty) {
                     return SizedBox(
                       height: cardHeight + 40,
                       child: Center(
@@ -109,20 +117,19 @@ class _HomeTabState extends State<HomeTab> {
                     child: PageView.builder(
                       controller: _pageController,
                       padEnds: true,
-                      itemCount: movies.length,
+                      itemCount: movieIds.length,
                       itemBuilder: (context, index) {
-                        final movie = movies[index];
+                        final movieId = movieIds[index];
+                        final posterUrl = _tmdbService.getPosterUrl(movieId);
 
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 10),
                           child: MovieCard(
-                            movie: movie,
+                            posterUrl: posterUrl,
                             width: cardWidth,
                             height: cardHeight,
                             isActive: true,
-                            onTap: () {
-                              // Handle card tap
-                            },
+                            onTap: () {},
                           ),
                         );
                       },
@@ -133,24 +140,28 @@ class _HomeTabState extends State<HomeTab> {
 
               const SizedBox(height: 20),
 
-              // Fresh Finds section
+              // FRESH FINDS
               FutureBuilder<List<Movie>>(
                 future: _tmdbService.fetchPopularMovies(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SizedBox.shrink();
                   }
-                  if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                  if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data!.isEmpty) {
                     return const SizedBox.shrink();
                   }
                   return _buildMoviesHorizontalList(
                     "Fresh Finds",
                     snapshot.data!,
                     cardWidth: (screenWidth * 0.4).clamp(150.0, 200.0),
-                    cardHeight: (screenWidth * 0.4 * (3.0 / 2.0)).clamp(225.0, 300.0),
-                    horizontalPadding: 15.0, // Adjust left padding
-                    itemSpacing: kPosterSpacing, // Adjust spacing between cards
-                    titlePadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10), // Adjust title padding
+                    cardHeight:
+                    (screenWidth * 0.4 * (3.0 / 2.0)).clamp(225.0, 300.0),
+                    horizontalPadding: 15.0,
+                    itemSpacing: kPosterSpacing,
+                    titlePadding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                   );
                 },
               ),
@@ -170,18 +181,18 @@ class _HomeTabState extends State<HomeTab> {
         double? cardHeight,
         double horizontalPadding = 15.0,
         double itemSpacing = 15.0,
-        EdgeInsetsGeometry titlePadding = const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+        EdgeInsetsGeometry titlePadding =
+        const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       }) {
     final screenWidth = MediaQuery.of(context).size.width;
-
-    // Use provided values or calculate defaults
-    final double finalCardWidth = cardWidth ?? (screenWidth * 0.4).clamp(150.0, 200.0);
-    final double finalCardHeight = cardHeight ?? finalCardWidth * (3.0 / 2.0);
+    final double finalCardWidth =
+        cardWidth ?? (screenWidth * 0.4).clamp(150.0, 200.0);
+    final double finalCardHeight =
+        cardHeight ?? finalCardWidth * (3.0 / 2.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title with adjustable padding
         Padding(
           padding: titlePadding,
           child: Text(
@@ -192,8 +203,6 @@ class _HomeTabState extends State<HomeTab> {
             ),
           ),
         ),
-
-        // Horizontal list with adjustable spacing
         SizedBox(
           height: finalCardHeight,
           child: ListView.builder(
@@ -208,9 +217,7 @@ class _HomeTabState extends State<HomeTab> {
                   movie: movie,
                   width: finalCardWidth,
                   height: finalCardHeight,
-                  onTap: () {
-                    // Handle tap
-                  },
+                  onTap: () {},
                 ),
               );
             },
