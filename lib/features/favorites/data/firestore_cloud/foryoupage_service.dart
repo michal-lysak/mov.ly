@@ -1,13 +1,11 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 
 class ForYouPageService {
-  final _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _tmdb = TMDBService();
 
-  /// Stream only IDs for poster carousel
   Stream<List<String>> streamForYouList(String uid) {
     return _db
         .collection('users')
@@ -18,79 +16,70 @@ class ForYouPageService {
         .map((snap) => snap.docs.map((d) => d['id'].toString()).toList());
   }
 
-  /// Generate For You movies (store only IDs)
   Future<void> generateForYouMovies(String uid) async {
     try {
-      // Latest 10 favorites
-      final latest = await _db
-          .collection('users')
-          .doc(uid)
-          .collection('favoritesperuser')
-          .orderBy('addedAt', descending: true)
-          .limit(10)
-          .get();
+      final favDoc = await _db.collection('favoritesperuser').doc(uid).get();
+      if (!favDoc.exists) return;
 
-      // Older 5 favorites
-      final lastLatest = latest.docs.isNotEmpty
-          ? (latest.docs.last['addedAt'] as Timestamp).toDate()
-          : DateTime.now();
+      final List<dynamic> favorites = favDoc['favorites'] ?? [];
+      if (favorites.isEmpty) return;
 
-      final older = await _db
-          .collection('users')
-          .doc(uid)
-          .collection('favoritesperuser')
-          .where('addedAt', isLessThan: lastLatest)
-          .limit(5)
-          .get();
+      favorites.sort((a, b) =>
+          (b['favoritedAt'] as Comparable).compareTo(a['favoritedAt']));
 
-      final movieIds = [
-        ...latest.docs.map((d) => d['movieId'].toString()),
-        ...older.docs.map((d) => d['movieId'].toString()),
-      ];
-
-      if (movieIds.isEmpty) return;
-
-      // Pick ONE keyword per movie
+      final ids = favorites.map((f) => f['id'].toString()).toList();
       final keywordDocs = await Future.wait(
-        movieIds.map((id) => _db.collection('favoritemovies').doc(id).get()),
+        ids.map((id) => _db.collection('favoritemovies').doc(id).get()),
       );
 
       final keywords = <String>[];
-      for (var doc in keywordDocs) {
+      for (var i = 0; i < keywordDocs.length; i++) {
+        final doc = keywordDocs[i];
         if (!doc.exists) continue;
-        final List<dynamic> k = doc['keywords'];
+
+        final k = doc['keywords'] ?? [];
         if (k.isNotEmpty) {
-          k.shuffle();
-          keywords.add(k.first);
+          final shuffled = List.from(k)..shuffle(Random());
+          keywords.add(shuffled.first.toString());
         }
       }
 
       if (keywords.isEmpty) return;
 
-      final searchKeywords = keywords.take(5).toList();
-
-      // Discover movies from TMDB
+      final searchKeywords = keywords.toSet().take(5).toList();
       final discovered = <String>[];
+
       for (final kw in searchKeywords) {
-        final results = await _tmdb.discoverByKeyword(keyword: kw);
-        discovered.addAll(results.map((m) => m.id.toString()).take(5));
+        try {
+          final results = await _tmdb.discoverByKeyword(keyword: kw);
+          discovered.addAll(
+              results.map((m) => m.id.toString()).take(3)); // limit
+        } catch (_) {}
       }
 
-      // Remove duplicates
-      final unique = discovered.toSet().toList();
+      final unique = discovered.toSet().take(20).toList();
+      if (unique.isEmpty) return;
 
-      // Save only IDs
+      final batch = _db.batch();
       final col =
       _db.collection('users').doc(uid).collection('foryoupagelist');
 
-      for (var id in unique) {
-        await col.doc(id).set({
+      final existing = await col.get();
+      for (final doc in existing.docs) {
+        batch.delete(doc.reference);
+      }
+
+      for (final id in unique) {
+        batch.set(col.doc(id), {
           'id': id,
           'timestamp': FieldValue.serverTimestamp(),
         });
       }
+
+      await batch.commit();
     } catch (e) {
       print("ForYou generation error: $e");
+      rethrow;
     }
   }
 
