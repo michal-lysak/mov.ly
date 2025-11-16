@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:movly/features/constants/spacing.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
+import '../../data/cache/backdrop_cache.dart';
+import '../../data/models/movie.dart';
 import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
@@ -18,23 +20,96 @@ class _HomeTabState extends State<HomeTab> {
   final PageController _pageController = PageController(viewportFraction: 0.8);
   final ForYouPageService _forYouService = ForYouPageService();
 
-  bool _didGenerate = false;
+  bool _isGenerating = false;
+  bool _hasGenerated = false;
+  bool _isLoadingMovies = false;
+
+  List<Movie> _forYouMovies = [];
 
   @override
   void initState() {
     super.initState();
-    _tryGenerateForYou();
+    _generateForYouIfNeeded();
   }
 
-  Future<void> _tryGenerateForYou() async {
+  Future<void> _generateForYouIfNeeded() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || _isGenerating) return;
 
-    final snapshot = await _forYouService.streamForYouList(user.uid).first;
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-    if (!_didGenerate && snapshot.isEmpty) {
-      _didGenerate = true;
+      final alreadyGenerated = userDoc.data()?['forYouGenerated'] == true;
+
+      if (alreadyGenerated) {
+        _hasGenerated = true;
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = true;
+        });
+      }
+
       await _forYouService.generateForYouMovies(user.uid);
+
+      // Mark as generated
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'forYouGenerated': true});
+
+      if (mounted) {
+        setState(() {
+          _hasGenerated = true;
+          _isGenerating = false;
+        });
+      }
+
+    } catch (e) {
+      print("Error generating For You movies: $e");
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
+    }
+  }
+
+  Future<void> _loadForYouMovies(List<String> ids) async {
+    if (_isLoadingMovies || ids.isEmpty) return;
+
+    if (mounted) {
+      setState(() => _isLoadingMovies = true);
+    }
+
+    try {
+      final movies = <Movie>[];
+      for (final id in ids) {
+        try {
+          final movie = await _tmdbService.fetchMovieById(id);
+          if (movie != null && movie.backdropPath != null) {
+            movies.add(movie);
+          }
+        } catch (e) {
+          print("Failed loading movie $id: $e");
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _forYouMovies = movies;
+          _isLoadingMovies = false;
+        });
+      }
+
+    } catch (e) {
+      print("Load error: $e");
+      if (mounted) {
+        setState(() => _isLoadingMovies = false);
+      }
     }
   }
 
@@ -48,15 +123,16 @@ class _HomeTabState extends State<HomeTab> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
       return const Scaffold(
-        body: Center(child: Text('Please log in')),
+        body: Center(child: Text("Please log in")),
       );
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = screenWidth * 0.8;
-    final cardHeight = cardWidth / (16.0 / 9.0);
+    final cardHeight = cardWidth / (16 / 9);
 
     return Scaffold(
       body: SafeArea(
@@ -80,30 +156,32 @@ class _HomeTabState extends State<HomeTab> {
               StreamBuilder<List<String>>(
                 stream: _forYouService.streamForYouList(user.uid),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  final ids = snapshot.data ?? [];
+
+                  // Load only once
+                  if (ids.isNotEmpty &&
+                      _forYouMovies.isEmpty &&
+                      !_isLoadingMovies &&
+                      !_isGenerating) {
+                    WidgetsBinding.instance
+                        .addPostFrameCallback((_) => _loadForYouMovies(ids));
+                  }
+
+                  if (_isGenerating || _isLoadingMovies) {
                     return SizedBox(
                       height: cardHeight + 40,
                       child: const Center(child: CircularProgressIndicator()),
                     );
                   }
 
-                  if (snapshot.hasError) {
-                    return SizedBox(
-                      height: cardHeight + 40,
-                      child: Center(child: Text('Error: ${snapshot.error}')),
-                    );
-                  }
-
-                  final movieIds = snapshot.data ?? [];
-
-                  if (movieIds.isEmpty) {
+                  if (_forYouMovies.isEmpty) {
                     return SizedBox(
                       height: cardHeight + 40,
                       child: Center(
                         child: Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
-                            'Add some favorites to get personalized recommendations!',
+                            "Add some favorites to get recommendations!",
                             style: GoogleFonts.afacad(fontSize: 16),
                             textAlign: TextAlign.center,
                           ),
@@ -116,21 +194,26 @@ class _HomeTabState extends State<HomeTab> {
                     height: cardHeight + 40,
                     child: PageView.builder(
                       controller: _pageController,
-                      padEnds: true,
-                      itemCount: movieIds.length,
+                      itemCount: _forYouMovies.length,
                       itemBuilder: (context, index) {
-                        final movieId = movieIds[index];
-                        final posterUrl = _tmdbService.getPosterUrl(movieId);
-
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          child: MovieCard(
-                            posterUrl: posterUrl,
-                            width: cardWidth,
-                            height: cardHeight,
-                            isActive: true,
-                            onTap: () {},
+                        final movie = _forYouMovies[index];
+                        return Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Stack(
+                            children: [
+                              CachedBackdropImage.fromMovie(movie),
+                             /* Container(
+                                child: Text(
+                                  _forYouMovies[index].title,
+                                  style: GoogleFonts.afacad(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                ),
+                                ),
+                              )*/
+                            ],
                           ),
+
                         );
                       },
                     ),
@@ -144,24 +227,14 @@ class _HomeTabState extends State<HomeTab> {
               FutureBuilder<List<Movie>>(
                 future: _tmdbService.fetchPopularMovies(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox.shrink();
-                  }
-                  if (snapshot.hasError ||
-                      !snapshot.hasData ||
-                      snapshot.data!.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
+                  if (!snapshot.hasData) return const SizedBox.shrink();
+                  final movies = snapshot.data!;
                   return _buildMoviesHorizontalList(
                     "Fresh Finds",
-                    snapshot.data!,
-                    cardWidth: (screenWidth * 0.4).clamp(150.0, 200.0),
+                    movies,
+                    cardWidth: (screenWidth * 0.4).clamp(150, 200),
                     cardHeight:
-                    (screenWidth * 0.4 * (3.0 / 2.0)).clamp(225.0, 300.0),
-                    horizontalPadding: 15.0,
-                    itemSpacing: kPosterSpacing,
-                    titlePadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                    (screenWidth * 0.4 * (3 / 2)).clamp(225, 300),
                   );
                 },
               ),
@@ -179,22 +252,17 @@ class _HomeTabState extends State<HomeTab> {
       List<Movie> movies, {
         double? cardWidth,
         double? cardHeight,
-        double horizontalPadding = 15.0,
-        double itemSpacing = 15.0,
-        EdgeInsetsGeometry titlePadding =
-        const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       }) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final double finalCardWidth =
-        cardWidth ?? (screenWidth * 0.4).clamp(150.0, 200.0);
-    final double finalCardHeight =
-        cardHeight ?? finalCardWidth * (3.0 / 2.0);
+    final w = cardWidth ?? (screenWidth * 0.4).clamp(150, 200);
+    final h = cardHeight ?? w * (3 / 2);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: titlePadding,
+          padding:
+          const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           child: Text(
             title,
             style: GoogleFonts.afacad(
@@ -204,19 +272,19 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         SizedBox(
-          height: finalCardHeight,
+          height: h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: movies.length,
-            padding: EdgeInsets.only(left: horizontalPadding),
+            padding: const EdgeInsets.only(left: 15),
             itemBuilder: (context, index) {
               final movie = movies[index];
               return Padding(
-                padding: EdgeInsets.only(right: itemSpacing),
+                padding: const EdgeInsets.only(right: 15),
                 child: MovieCard(
                   movie: movie,
-                  width: finalCardWidth,
-                  height: finalCardHeight,
+                  width: w,
+                  height: h,
                   onTap: () {},
                 ),
               );
