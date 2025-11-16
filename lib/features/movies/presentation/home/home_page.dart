@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/favorites/model/favorite_movie_model.dart';
 import '../../data/models/movie.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_card.dart';
@@ -17,7 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _forYouService = ForYouService();
+  final _forYouService = ForYouPageService();
   final _tmdbService = TMDBService();
   int index = 0;
 
