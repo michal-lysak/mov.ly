@@ -202,15 +202,84 @@ class _HomeTabState extends State<HomeTab> {
                           child: Stack(
                             children: [
                               CachedBackdropImage.fromMovie(movie),
-                             /* Container(
-                                child: Text(
-                                  _forYouMovies[index].title,
-                                  style: GoogleFonts.afacad(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w600,
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                height: 120, // adjust height to cover text area
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: .circular(10),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.7), // shadow darkness
+                                      ],
+                                    ),
+                                  ),
                                 ),
+                              ),
+
+                              // Overlay: Movie Info
+                              Container(
+                               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 22),
+                               alignment: .bottomLeft,
+                                // Movie Name
+                                child: Column(
+                                  crossAxisAlignment: .start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      softWrap: true,
+                                      _forYouMovies[index].title,
+                                      style: GoogleFonts.afacad(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        height: 1.1,
+                                    ),
+                                      maxLines: 2, // limit to 2 lines
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+
+                                    Row(
+                                      children: [
+                                        // Release Year
+                                        Text(
+                                          _forYouMovies[index].releaseDate.substring(0, 4),
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        // Category
+                                        Text(
+                                          "·",
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white.withOpacity(0.8),
+                                          ),
+                                        ),
+                                        SizedBox(width:8),
+                                        //TODO:
+                                        Text(
+                                          'Category',
+                                          style: GoogleFonts.afacad(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  ],
                                 ),
-                              )*/
+                              ),
                             ],
                           ),
 
@@ -272,25 +341,56 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         SizedBox(
-          height: h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: movies.length,
-            padding: const EdgeInsets.only(left: 15),
-            itemBuilder: (context, index) {
-              final movie = movies[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 15),
-                child: MovieCard(
-                  movie: movie,
-                  width: w,
-                  height: h,
-                  onTap: () {},
-                ),
+          height: 220, // card height
+          child: FutureBuilder<List<Movie>>(
+            future: _tmdbService.fetchPopularMovies(),
+
+    builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('No movies found'));
+              }
+
+              final movies = snapshot.data!;
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: movies.length,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                itemBuilder: (context, index) {
+                  final movie = movies[index];
+                  return Container(
+                    margin: EdgeInsets.only(right: index == movies.length - 1 ? 0 : 8),
+                    width: 140, // card width
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Poster
+                        Expanded(
+                          child: movie.posterPath != null
+                              ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              'https://image.tmdb.org/t/p/w500${movie.posterPath}',
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                              : Container(
+                            color: Colors.grey,
+                            child: const Center(child: Text('No Image')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
-        ),
+        )
       ],
     );
   }
