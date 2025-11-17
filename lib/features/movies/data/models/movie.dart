@@ -6,6 +6,7 @@ class Movie {
   final String? backdropPath;  // optional
   final String releaseDate;
   final double voteAverage;
+  final List<String> categories;
 
   Movie({
     required this.id,
@@ -15,18 +16,33 @@ class Movie {
     this.backdropPath,
     required this.releaseDate,
     required this.voteAverage,
+    this.categories = const [],
   });
 
-  factory Movie.fromJson(Map<String, dynamic> json) {
-    return Movie(
-      id: json['id'] as int,
-      title: json['title'] ?? 'Untitled',
-      overview: json['overview'] ?? '',
-      posterPath: json['poster_path'],
-      backdropPath: json['backdrop_path'],
-      releaseDate: json['release_date'] ?? 'Unknown',
-      voteAverage: (json['vote_average'] ?? 0).toDouble(),
-    );
+  factory Movie.fromJson(Map<String, dynamic> json, {Map<int, String>? genreMap}) {
+    //genreMap maps TMDB genre_id -> genre_name
+    List<String> genres = [];
+    if (json['genre_ids'] != null && json['genre_ids'] is List) {
+      genres = (json['genre_ids'] as List)
+          .map((id) => genreMap?[id] ?? 'Unknown')
+          .cast<String>()
+          .toList();
+    } else if (json['genres'] != null && json['genres'] is List) {
+      genres = (json['genres'] as List)
+          .map((g) => g['name'] ?? 'Unknown')
+          .cast<String>()
+          .toList();
+    }
+      return Movie(
+        id: json['id'] as int,
+        title: json['title'] ?? 'Untitled',
+        overview: json['overview'] ?? '',
+        posterPath: json['poster_path'],
+        backdropPath: json['backdrop_path'],
+        releaseDate: json['release_date'] ?? 'Unknown',
+        voteAverage: (json['vote_average'] ?? 0).toDouble(),
+        categories: genres,
+      );
   }
 
   Map<String, dynamic> toJson() {
@@ -38,6 +54,7 @@ class Movie {
       'backdrop_path': backdropPath,
       'release_date': releaseDate,
       'vote_average': voteAverage,
+      'categories': categories,
     };
   }
 

@@ -267,12 +267,16 @@ class _HomeTabState extends State<HomeTab> {
                                         ),
                                         SizedBox(width:8),
                                         //TODO:
-                                        Text(
-                                          'Category',
-                                          style: GoogleFonts.afacad(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
+                                        Flexible(
+                                          child: Text(
+                                            _forYouMovies[index].categories.join(", "),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.afacad(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ],
