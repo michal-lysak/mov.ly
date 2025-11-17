@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 
+import '../../data/cache/backdrop_cache.dart';
+
 class MovieCard extends StatelessWidget {
   const MovieCard({
     super.key,
@@ -43,18 +45,11 @@ class MovieCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // Backdrop only — pure cinema
-              Image.network(
-                movie.cardImageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[900],
-                  child: const Icon(Icons.movie, color: Colors.grey, size: 48),
-                ),
-              ),
+              CachedBackdropImage.fromMovie(movie),
 
 
               // Fade for text readability
-              Positioned.fill(
+              Positioned(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -88,14 +83,39 @@ class MovieCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      movie.releaseDate.isNotEmpty
-                          ? movie.releaseDate.split('-').first
-                          : "N/A",
-                      style: GoogleFonts.afacad(
-                        fontSize: metaFontSize,
-                        color: Colors.grey[300],
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          movie.releaseDate.isNotEmpty
+                              ? movie.releaseDate.split('-').first
+                              : "N/A",
+                          style: GoogleFonts.afacad(
+                            fontSize: metaFontSize,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "·",
+                          style: GoogleFonts.afacad(
+                            fontSize: metaFontSize,
+                            color: Colors.grey[300],
+                            fontWeight: .w900,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            movie.categories.join(", "),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.afacad(
+                              fontSize: metaFontSize,
+                              color: Colors.grey[300],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

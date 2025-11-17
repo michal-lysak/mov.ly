@@ -26,10 +26,21 @@ class _HomeTabState extends State<HomeTab> {
 
   List<Movie> _forYouMovies = [];
 
+  int _activeIndex = 0;
+
+
   @override
   void initState() {
     super.initState();
     _generateForYouIfNeeded();
+
+    _pageController.addListener(() {
+      final page = _pageController.page ?? 0;
+      setState(() {
+        _activeIndex = page.round();
+      });
+    });
+
   }
 
   Future<void> _generateForYouIfNeeded() async {
@@ -198,95 +209,13 @@ class _HomeTabState extends State<HomeTab> {
                       itemBuilder: (context, index) {
                         final movie = _forYouMovies[index];
                         return Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Stack(
-                            children: [
-                              CachedBackdropImage.fromMovie(movie),
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                height: 120, // adjust height to cover text area
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: .circular(10),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.transparent,
-                                        Colors.black.withOpacity(0.7), // shadow darkness
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              // Overlay: Movie Info
-                              Container(
-                               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 22),
-                               alignment: .bottomLeft,
-                                // Movie Name
-                                child: Column(
-                                  crossAxisAlignment: .start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      softWrap: true,
-                                      _forYouMovies[index].title,
-                                      style: GoogleFonts.afacad(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                        height: 1.1,
-                                    ),
-                                      maxLines: 2, // limit to 2 lines
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-
-                                    Row(
-                                      children: [
-                                        // Release Year
-                                        Text(
-                                          _forYouMovies[index].releaseDate.substring(0, 4),
-                                          style: GoogleFonts.afacad(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        // Category
-                                        Text(
-                                          "·",
-                                          style: GoogleFonts.afacad(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.white.withOpacity(0.8),
-                                          ),
-                                        ),
-                                        SizedBox(width:8),
-                                        //TODO:
-                                        Flexible(
-                                          child: Text(
-                                            _forYouMovies[index].categories.join(", "),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.afacad(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ],
+                          padding: const EdgeInsets.all(0.0),
+                          child: MovieCard(
+                            movie: movie,
+                            width: cardWidth,
+                            height: cardHeight,
+                            isActive: index == _activeIndex,
                           ),
-
                         );
                       },
                     ),
