@@ -5,7 +5,7 @@ import 'package:movly/features/movies/presentation/home/home_page.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/firebase_options.dart';
 import 'package:movly/features/auth/presentation/pages/login_page.dart';
-import 'themes/light_mode.dart';
+import 'themes/dark_mode.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
@@ -28,9 +28,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Mov.ly',
 
-      theme: lightMode,
+      theme: darkMode,
       // Start on the login page
-      initialRoute: '/preHome',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
         '/preHome': (context) => const PreHomePage(),
