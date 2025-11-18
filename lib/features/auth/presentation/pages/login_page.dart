@@ -143,6 +143,8 @@ void openForgotPassword() {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: Text(
           'Mov.ly',
           style: GoogleFonts.lilyScriptOne(
@@ -151,88 +153,129 @@ void openForgotPassword() {
         ),
         centerTitle: true,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-
-            children: [
-              Text(
-                "To use this app, you need to sign in.",
-                style: GoogleFonts.kronaOne(
-                  fontSize: 24,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-
-
-              const SizedBox(height: 20),
-
-             _isLoading
-                ?
-                    const CircularProgressIndicator()
-              : Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                  mainAxisAlignment: .center,
+          
                 children: [
+                  const SizedBox(height: 40),
 
-                // email textfield
-                MyTextfield(
-                  controller: emailController,
-                  hintText: "Email",
-                  obscureText: false,
-                ),
-
-                const SizedBox(height: 10),
-
-                //pw textfield
-                MyTextfield(
-                  controller: pwController,
-                  hintText: "Password",
-                  obscureText: true,
-                ),
-
-                //const SizedBox(height: 10),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                  GestureDetector(
-                     onTap: () => openForgotPassword(),
-                    child: Text(
-                      "Forgot Password?",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.inversePrimary,
-                        //decoration: TextDecoration.underline,
-                      ),
-                    ),
+                  Icon(
+                    Icons.login,
+                    size: 75,
                   ),
-                ],),
 
-                const SizedBox(height: 10),
+                  SizedBox(height: 10),
 
-                MyButton(
-                  onTap: signInWithEmailAndPassword,
-                  text: "Sign in"
+                  Text(
+                    "Welcome",
+                    style: GoogleFonts.bebasNeue(
+                      fontSize: 52,
+                      //fontWeight: .w600
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+          
+                  Text(
+                    "You need to sign in",
+                    style: TextStyle(
+                      fontSize: 20,
+                      //fontWeight: .w600
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+          
+          
+                  const SizedBox(height: 30),
+          
+                 _isLoading
+                    ?
+                        const CircularProgressIndicator()
+                  : Column(
+                    children: [
+          
+                    // email textfield
+                    MyTextfield(
+                      controller: emailController,
+                      hintText: "Email",
+                      obscureText: false,
+                    ),
+          
+                    const SizedBox(height: 10),
+          
+                    //pw textfield
+                    MyTextfield(
+                      controller: pwController,
+                      hintText: "Password",
+                      obscureText: true,
+                    ),
+          
+                    //const SizedBox(height: 5),
+          
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                      GestureDetector(
+                         onTap: () => openForgotPassword(),
+                        child: Text(
+                          "Forgot Password?",
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.inversePrimary,
+                            //decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],),
+          
+                    const SizedBox(height: 10),
+          
+                    MyButton(
+                      onTap: signInWithEmailAndPassword,
+                      text: "Sign in"
+                    ),
+          
+          
+                    const SizedBox(height: 10),
+          
+                    if (_errorMessage != null)
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                      Row(
+                          mainAxisAlignment: .center,
+                          children: [
+                            Text(
+                                'Not signed in? '
+                            ),
+          
+                            GestureDetector(
+                              child: Text(
+                                'Register now',
+                                style: TextStyle(
+                                    color: Colors.blue
+                                ),
+                              ),
+                            )
+                          ]
+                      ),
+                    
+                    SizedBox(height: 30),
+                    MyGoogleSignInButton(onTap: _signInWithGoogle),
+          
+                      //SizedBox(height: 20),
+          
+                ],
                 ),
-
-
-                const SizedBox(height: 10),
-
-                if (_errorMessage != null)
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-
-                MyGoogleSignInButton(onTap: _signInWithGoogle),
-            ],
+                ],
+              ),
             ),
-            ],
           ),
         ),
       ),
