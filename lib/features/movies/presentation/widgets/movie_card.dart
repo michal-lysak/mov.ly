@@ -24,7 +24,7 @@ class MovieCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double scale = isActive ? 1.0 : 0.87;
-    final double titleFontSize = (height * 0.093).clamp(14.0, 22.0);
+    final double titleFontSize = (height * 0.10).clamp(18.0, 28.0);
     final double metaFontSize = (height * 0.072).clamp(12.0, 18.0);
     final double gradientHeight = (height * 0.41).clamp(60.0, 110.0);
 
@@ -85,13 +85,20 @@ class MovieCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(
-                          movie.releaseDate.isNotEmpty
-                              ? movie.releaseDate.split('-').first
-                              : "N/A",
-                          style: GoogleFonts.afacad(
-                            fontSize: metaFontSize,
-                            color: Colors.grey[300],
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[900],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Text(
+                            movie.releaseDate.isNotEmpty
+                                ? movie.releaseDate.split('-').first
+                                : "N/A",
+                            style: GoogleFonts.afacad(
+                              fontSize: metaFontSize,
+                              color: Colors.grey[300],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -104,17 +111,35 @@ class MovieCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            movie.categories.join(", "),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.afacad(
-                              fontSize: metaFontSize,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                        ),
+                        Row(
+                          children: movie.categories.take(3).map((cat) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: SizedBox(
+                                width: 60,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[800],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  child: Text(
+                                    cat,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: .center,
+                                    style: GoogleFonts.afacad(
+                                      fontSize: metaFontSize,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        )
+
+
                       ],
                     ),
                   ],
