@@ -30,8 +30,8 @@ class NavIcon extends StatelessWidget {
           height: 24,
           colorFilter: ColorFilter.mode(
             selected
-                ? Colors.black
-                : Colors.black.withOpacity(0.45),
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.primary.withOpacity(0.45),
             BlendMode.srcIn,
           ),
         ),
