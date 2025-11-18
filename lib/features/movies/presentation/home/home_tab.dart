@@ -146,6 +146,7 @@ class _HomeTabState extends State<HomeTab> {
     final cardHeight = cardWidth / (16 / 9);
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
