@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
+import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import '../../data/cache/backdrop_cache.dart';
 import '../../data/models/movie.dart';
@@ -304,10 +305,7 @@ class _HomeTabState extends State<HomeTab> {
                           child: movie.posterPath != null
                               ? ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              'https://image.tmdb.org/t/p/w500${movie.posterPath}',
-                              fit: BoxFit.cover,
-                            ),
+                            child: CachedPosterImage.fromMovie(movie)
                           )
                               : Container(
                             color: Colors.grey,
