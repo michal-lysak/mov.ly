@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
+import 'package:movly/features/movies/presentation/widgets/bottom_sheet.dart';
 import '../../data/cache/backdrop_cache.dart';
 import '../../data/models/movie.dart';
 import '../widgets/movie_card.dart';
@@ -214,7 +215,17 @@ class _HomeTabState extends State<HomeTab> {
                                 width: cardWidth,
                                 height: cardHeight,
                                 isActive: index == activeIndex,
+                                onTap: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => MovieSheet(movie: movie),
+                                  );
+                                },
+
                               );
+
                             },
                           ),
                         );
