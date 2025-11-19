@@ -24,12 +24,18 @@ class Movie {
     List<String> genres = [];
     if (json['genre_ids'] != null && json['genre_ids'] is List) {
       genres = (json['genre_ids'] as List)
-          .map((id) => genreMap?[id] ?? 'Unknown')
+          .map((id) {
+            final genreName = genreMap?[id] ?? 'Unknown';
+            return genreName == 'Science Fiction' ? 'Sci-Fi' : genreName;
+          })
           .cast<String>()
           .toList();
     } else if (json['genres'] != null && json['genres'] is List) {
       genres = (json['genres'] as List)
-          .map((g) => g['name'] ?? 'Unknown')
+          .map((g) {
+            final genreName = g['name'] ?? 'Unknown';
+            return genreName == 'Science Fiction' ? 'Sci-Fi' : genreName;
+          })
           .cast<String>()
           .toList();
     }
