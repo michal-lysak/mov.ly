@@ -76,8 +76,9 @@ class MovieCard extends StatelessWidget {
                       movie.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.afacad(
-                        fontSize: titleFontSize,
+                      style: GoogleFonts.bebasNeue(
+                        height: 0.9,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
