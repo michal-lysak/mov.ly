@@ -19,15 +19,13 @@ class _HomeTabState extends State<HomeTab> {
   final TMDBService _tmdbService = TMDBService();
   final PageController _pageController = PageController(viewportFraction: 0.8);
   final ForYouPageService _forYouService = ForYouPageService();
+  final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
 
   bool _isGenerating = false;
   bool _hasGenerated = false;
   bool _isLoadingMovies = false;
 
   List<Movie> _forYouMovies = [];
-
-  int _activeIndex = 0;
-
 
   @override
   void initState() {
@@ -36,11 +34,8 @@ class _HomeTabState extends State<HomeTab> {
 
     _pageController.addListener(() {
       final page = _pageController.page ?? 0;
-      setState(() {
-        _activeIndex = page.round();
-      });
+      _activeIndexNotifier.value = page.round();
     });
-
   }
 
   Future<void> _generateForYouIfNeeded() async {
@@ -80,7 +75,6 @@ class _HomeTabState extends State<HomeTab> {
           _isGenerating = false;
         });
       }
-
     } catch (e) {
       print("Error generating For You movies: $e");
       if (mounted) {
@@ -115,7 +109,6 @@ class _HomeTabState extends State<HomeTab> {
           _isLoadingMovies = false;
         });
       }
-
     } catch (e) {
       print("Load error: $e");
       if (mounted) {
@@ -128,6 +121,7 @@ class _HomeTabState extends State<HomeTab> {
   void dispose() {
     _pageController.dispose();
     _forYouService.dispose();
+    _activeIndexNotifier.dispose();
     super.dispose();
   }
 
@@ -211,11 +205,16 @@ class _HomeTabState extends State<HomeTab> {
                         final movie = _forYouMovies[index];
                         return Padding(
                           padding: const EdgeInsets.all(0.0),
-                          child: MovieCard(
-                            movie: movie,
-                            width: cardWidth,
-                            height: cardHeight,
-                            isActive: index == _activeIndex,
+                          child: ValueListenableBuilder<int>(
+                            valueListenable: _activeIndexNotifier,
+                            builder: (context, activeIndex, child) {
+                              return MovieCard(
+                                movie: movie,
+                                width: cardWidth,
+                                height: cardHeight,
+                                isActive: index == activeIndex,
+                              );
+                            },
                           ),
                         );
                       },
@@ -236,8 +235,7 @@ class _HomeTabState extends State<HomeTab> {
                     "Fresh Finds",
                     movies,
                     cardWidth: (screenWidth * 0.4).clamp(150, 200),
-                    cardHeight:
-                    (screenWidth * 0.4 * (3 / 2)).clamp(225, 300),
+                    cardHeight: (screenWidth * 0.4 * (3 / 2)).clamp(225, 300),
                   );
                 },
               ),
@@ -264,8 +262,7 @@ class _HomeTabState extends State<HomeTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           child: Text(
             title,
             style: GoogleFonts.afacad(
@@ -275,11 +272,10 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         SizedBox(
-          height: 220, // card height
+          height: 220,
           child: FutureBuilder<List<Movie>>(
             future: _tmdbService.fetchPopularMovies(),
-
-    builder: (context, snapshot) {
+            builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
@@ -297,8 +293,9 @@ class _HomeTabState extends State<HomeTab> {
                 itemBuilder: (context, index) {
                   final movie = movies[index];
                   return Container(
-                    margin: EdgeInsets.only(right: index == movies.length - 1 ? 0 : 8),
-                    width: 140, // card width
+                    margin: EdgeInsets.only(
+                        right: index == movies.length - 1 ? 0 : 8),
+                    width: 140,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -314,7 +311,8 @@ class _HomeTabState extends State<HomeTab> {
                           )
                               : Container(
                             color: Colors.grey,
-                            child: const Center(child: Text('No Image')),
+                            child:
+                            const Center(child: Text('No Image')),
                           ),
                         ),
                       ],
