@@ -19,6 +19,14 @@ class CachedBackdropImage extends StatelessWidget {
     return CachedBackdropImage(imageUrl: movie.backdropUrl);
   }
 
+  factory CachedBackdropImage.fromPath(String path) {
+    // 1. Define the base URL (use w780, w1280, or original)
+    const baseUrl = 'https://image.tmdb.org/t/p/w780';
+
+    // 2. Combine them
+    return CachedBackdropImage(imageUrl: '$baseUrl$path');
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
