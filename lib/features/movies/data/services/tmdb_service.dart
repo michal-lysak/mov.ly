@@ -147,4 +147,35 @@ class TMDBService {
     }
   }
 
+  // --- Caching ---
+  final Map<int, List<String>> _cachedBackdrops = {};
+
+  // Fetching Movie Backdrops
+  Future<List<String>> fetchMovieBackdrops(int movieId) async {
+    // Check cache first
+    if (_cachedBackdrops.containsKey(movieId)) {
+      return _cachedBackdrops[movieId]!;
+    }
+
+    final url = Uri.parse(
+      '$_baseUrl/movie/$movieId/images?api_key=$_apiKey',
+    );
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List results = data['backdrops'];
+
+      final backdrops =
+          results.map((item) => item['file_path'] as String).toList();
+
+      // Cache the results
+      _cachedBackdrops[movieId] = backdrops;
+      return backdrops;
+    } else {
+      throw Exception('Failed to load backdrops: ${response.statusCode}');
+    }
+  }
+
 }
