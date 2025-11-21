@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/cache/backdrop_cache.dart';
+import 'package:movly/features/movies/presentation/widgets/s.dart';
 import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
@@ -55,6 +56,8 @@ class _MovieSheetState extends State<MovieSheet> {
     }
   }
 
+
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -63,13 +66,18 @@ class _MovieSheetState extends State<MovieSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 500,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      child: SingleChildScrollView(
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, controller) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        child: SingleChildScrollView(
+        controller: controller,
         padding: const EdgeInsets.only(bottom: 40),
         child: Column(
           crossAxisAlignment: .start,
@@ -189,25 +197,35 @@ class _MovieSheetState extends State<MovieSheet> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-              Text(
-              widget.movie.overview,
-              textAlign: .start,
-              style: GoogleFonts.afacad(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-              ),
+                  ExpandableText(
+                    text: widget.movie.overview,
+                    maxLines: 2, // optional, used in widget if you want
+                  ),
                 ],
-
+            ),
             ),
 
+            SizedBox(height: 20),
 
-
+            Center(
+              child: Text(
+                "More from production",
+                style: GoogleFonts.afacad(
+                  fontSize: 24,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
+            CompanyMoviesSection(
+              movieId: widget.movie.id,
+              productionCompanies: widget.movie.productionCompanies,
+            ),
+
           ],
         ),
       ),
-    );
+    ),);
   }
 
   Widget _buildCarouselItem(int index) {
@@ -251,3 +269,55 @@ class _MovieSheetState extends State<MovieSheet> {
     );
   }
 }
+
+class ExpandableText extends StatefulWidget {
+  final String text;
+  final int maxLines;
+
+  const ExpandableText({
+    super.key,
+    required this.text,
+    this.maxLines = 2,
+  });
+
+  @override
+  State<ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<ExpandableText> {
+  bool expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // check if the text is short enough to not need "More"
+    final needTruncate = widget.text.length > 120;
+
+    return GestureDetector(
+      onTap: () => setState(() => expanded = !expanded),
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: expanded || !needTruncate
+                  ? widget.text
+                  : widget.text.substring(0, 120) + "...",
+              style: GoogleFonts.afacad(
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+            if (needTruncate)
+              TextSpan(
+                text: expanded ? "  Less" : "  More",
+                style: GoogleFonts.afacad(
+                  fontSize: 16,
+                  color: Colors.blue,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
