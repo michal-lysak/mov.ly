@@ -7,20 +7,6 @@ class TMDBService {
   final String _baseUrl = 'https://api.themoviedb.org/3';
   final String? _apiKey = dotenv.env['TMDB_API_KEY'];
 
-  Future<List<Movie>> fetchTrendingMovies({String window = 'day', int page = 1}) async {
-    // window can be 'day' or 'week'
-    final response = await http.get(
-      Uri.parse('$_baseUrl/trending/movie/$window?api_key=$_apiKey&page=$page'),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List results = data['results'];
-      return results.map((json) => Movie.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load trending movies: ${response.statusCode}');
-    }
-  }
 
   Future<List<Movie>> fetchPopularMovies({int page = 1}) async {
     final response = await http.get(
@@ -84,7 +70,7 @@ class TMDBService {
     return keywords;
   }
 
-  Future<Movie?> fetchMovieById(String movieId) async {
+  Future<Movie?> fetchMovieById(int movieId) async {
     final url = Uri.parse('$_baseUrl/movie/$movieId?api_key=$_apiKey');
     final response = await http.get(url);
 
@@ -144,6 +130,37 @@ class TMDBService {
     } catch (e) {
       print("discoverByKeyword error: $e");
       return [];
+    }
+  }
+
+  // --- Caching ---
+  final Map<int, List<String>> _cachedBackdrops = {};
+
+  // Fetching Movie Backdrops
+  Future<List<String>> fetchMovieBackdrops(int movieId) async {
+    // Check cache first
+    if (_cachedBackdrops.containsKey(movieId)) {
+      return _cachedBackdrops[movieId]!;
+    }
+
+    final url = Uri.parse(
+      '$_baseUrl/movie/$movieId/images?api_key=$_apiKey',
+    );
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List results = data['backdrops'];
+
+      final backdrops =
+          results.map((item) => item['file_path'] as String).toList();
+
+      // Cache the results
+      _cachedBackdrops[movieId] = backdrops;
+      return backdrops;
+    } else {
+      throw Exception('Failed to load backdrops: ${response.statusCode}');
     }
   }
 

@@ -5,8 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
+import 'package:movly/features/movies/presentation/widgets/movie_sheet.dart';
 import '../../data/cache/backdrop_cache.dart';
 import '../../data/models/movie.dart';
+import '../widgets/horizontal-posters-scrolling.dart';
 import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
@@ -95,7 +97,7 @@ class _HomeTabState extends State<HomeTab> {
       final movies = <Movie>[];
       for (final id in ids) {
         try {
-          final movie = await _tmdbService.fetchMovieById(id);
+          final movie = await _tmdbService.fetchMovieById(int.parse(id));
           if (movie != null && movie.backdropPath != null) {
             movies.add(movie);
           }
@@ -214,7 +216,17 @@ class _HomeTabState extends State<HomeTab> {
                                 width: cardWidth,
                                 height: cardHeight,
                                 isActive: index == activeIndex,
+                                onTap: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => MovieSheet(movie: movie),
+                                  );
+                                },
+
                               );
+
                             },
                           ),
                         );
@@ -223,105 +235,18 @@ class _HomeTabState extends State<HomeTab> {
                   );
                 },
               ),
-
               const SizedBox(height: 20),
 
-              // FRESH FINDS
-              FutureBuilder<List<Movie>>(
-                future: _tmdbService.fetchPopularMovies(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const SizedBox.shrink();
-                  final movies = snapshot.data!;
-                  return _buildMoviesHorizontalList(
-                    "Fresh Finds",
-                    movies,
-                    cardWidth: (screenWidth * 0.4).clamp(150, 200),
-                    cardHeight: (screenWidth * 0.4 * (3 / 2)).clamp(225, 300),
-                  );
-                },
+              MovieCarousel(
+                title: "Popular now",
+                moviesFuture: _tmdbService.fetchPopularMovies(),
               ),
 
-              const SizedBox(height: 20),
+
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildMoviesHorizontalList(
-      String title,
-      List<Movie> movies, {
-        double? cardWidth,
-        double? cardHeight,
-      }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final w = cardWidth ?? (screenWidth * 0.4).clamp(150, 200);
-    final h = cardHeight ?? w * (3 / 2);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          child: Text(
-            title,
-            style: GoogleFonts.afacad(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 220,
-          child: FutureBuilder<List<Movie>>(
-            future: _tmdbService.fetchPopularMovies(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No movies found'));
-              }
-
-              final movies = snapshot.data!;
-
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: movies.length,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                itemBuilder: (context, index) {
-                  final movie = movies[index];
-                  return Container(
-                    margin: EdgeInsets.only(
-                        right: index == movies.length - 1 ? 0 : 8),
-                    width: 140,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Poster
-                        Expanded(
-                          child: movie.posterPath != null
-                              ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: CachedPosterImage.fromMovie(movie)
-                          )
-                              : Container(
-                            color: Colors.grey,
-                            child:
-                            const Center(child: Text('No Image')),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        )
-      ],
-    );
+    ); // Scaffold
   }
 }

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
+import '../widgets/movie_sheet.dart';
 import '../widgets/searching_bar.dart';
 
 class DiscoverPage extends StatefulWidget {
@@ -12,12 +13,14 @@ class DiscoverPage extends StatefulWidget {
   State<DiscoverPage> createState() => _DiscoverPageState();
 }
 
+
 class _DiscoverPageState extends State<DiscoverPage> {
   final TextEditingController searchController = TextEditingController();
   final tmdbService = TMDBService();
 
   List<Movie> searchResults = [];
   bool _isSearching = false;
+
 
   @override
   void dispose() {
@@ -85,8 +88,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 )
                     : GridView.builder(
                   padding: const EdgeInsets.all(4),
-                  gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
@@ -95,10 +97,27 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   itemCount: searchResults.length,
                   itemBuilder: (context, index) {
                     final movie = searchResults[index];
-                    return CachedPosterImage.fromMovie(movie);
+                    return GestureDetector(
+                      onTap: () async {
+                        final fullMovie = await tmdbService.fetchMovieById(movie.id);
+
+                        if (fullMovie == null) return;
+
+                        if (context.mounted) {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => MovieSheet(movie: fullMovie),
+                        );
+                      }
+                      },
+                      child: CachedPosterImage.fromMovie(movie),
+                    );
                   },
                 ),
-              ),
+              )
+
             ],
           ),
         ),
