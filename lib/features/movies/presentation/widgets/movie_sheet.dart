@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/cache/backdrop_cache.dart';
-import 'package:movly/features/movies/presentation/widgets/s.dart';
+import 'package:movly/features/movies/presentation/widgets/production-company-movies-scroll.dart';
 import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
