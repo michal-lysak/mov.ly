@@ -14,7 +14,23 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyC93zggPZjHRE4haeqt1MCAp6Z3SnSssV0",
+          authDomain: "movies-and-series-app---movly.firebaseapp.com",
+          projectId: "movies-and-series-app---movly",
+          storageBucket: "movies-and-series-app---movly.firebasestorage.app",
+          messagingSenderId: "431161171709",
+          appId: "1:431161171709:web:19b0e5e6f8ca22c5276894",
+        };
+
+        initializeApp(firebaseConfig);
+    </script>
+
+    <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
