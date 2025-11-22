@@ -236,13 +236,21 @@ class _HomeTabState extends State<HomeTab> {
                 },
               ),
               const SizedBox(height: 20),
+              
+              MovieCarousel(
+                  title: 'Now in Cinemas',
+                  moviesFuture: _tmdbService.fetchNowPlayingMovies()
+              ),
 
               MovieCarousel(
                 title: "Popular now",
                 moviesFuture: _tmdbService.fetchPopularMovies(),
               ),
 
-
+              MovieCarousel(
+                  title: 'Horror',
+                  moviesFuture: _tmdbService.fetchHorrorMovies()
+              ),
             ],
           ),
         ),
