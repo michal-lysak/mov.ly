@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
+import 'package:movly/features/favorites/data/firestore_cloud/favorites_counter_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
@@ -177,7 +177,7 @@ class _PreHomePageState extends State<PreHomePage> {
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.black.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Icon(
                                       Icons.favorite,
