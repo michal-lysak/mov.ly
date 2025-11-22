@@ -23,6 +23,36 @@ class TMDBService {
     }
   }
 
+  Future<List<Movie>> fetchHorrorMovies({int page = 2}) async {
+    final response = await http.get(
+        Uri.parse('$_baseUrl/discover/movie?api_key=$_apiKey&language=en-US&sort_by=popularity.desc&with_genre=27&page=$page'),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List results = data['results'];
+      return results.map((json) => Movie.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to fetch horror movies');
+    }
+  }
+
+  Future<List<Movie>> fetchNowPlayingMovies({int page = 1}) async {
+    final response = await http.get(
+      Uri.parse(
+        '$_baseUrl/movie/now_playing?api_key=$_apiKey&language=en-US&page=$page',
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List results = data['results'];
+      return results.map((json) => Movie.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to fetch movies now playing in cinemas');
+    }
+  }
+
+
 
 
   Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
