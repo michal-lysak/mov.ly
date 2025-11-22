@@ -17,21 +17,28 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  final _forYouService = ForYouPageService();
-  final _tmdbService = TMDBService();
+class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   int index = 0;
 
-  final _pages = const[
-    HomeTab(),
-    DiscoverPage(),
+  // store your pages once
+  final List<Widget> _pages = [
+    const HomeTab(),
+    const DiscoverPage(),
+    // you can add more tabs
   ];
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: _pages[index],
+      body: IndexedStack(
+        index: index,
+        children: _pages, // each tab stays alive now
+      ),
       bottomNavigationBar: Container(
         width: double.infinity,
         height: 70,
