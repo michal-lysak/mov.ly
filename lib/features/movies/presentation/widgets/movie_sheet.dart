@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/cache/backdrop_cache.dart';
 import 'package:movly/features/movies/presentation/widgets/production-company-movies-scroll.dart';
+import '../../../favorites/data/firestore_cloud/personal_favorites.dart';
 import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
@@ -18,17 +19,36 @@ class MovieSheet extends StatefulWidget {
 
 class _MovieSheetState extends State<MovieSheet> {
   final TMDBService _tmdbService = TMDBService();
+  final PersonalFavorites personalFavorites = PersonalFavorites();
 
   late PageController _pageController;
 
   List<String> _backdropPaths = [];
   bool _isLoading = true;
+  bool _isFavorite = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.85);
     _loadBackdrops();
+    _loadFavoriteStatus();
+  }
+
+ Future<void> _loadFavoriteStatus() async { // <<< ADDED
+    final fav = await personalFavorites.isFavorite(widget.movie.id);
+    if (mounted) {
+      setState(() {
+        _isFavorite = fav ?? false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async { // <<< ADDED
+    final newStatus = await personalFavorites.toggleFavorite(widget.movie.id);
+    if (mounted && newStatus != null) {
+      setState(() => _isFavorite = newStatus);
+    }
   }
 
   Future<void> _loadBackdrops() async {
@@ -150,13 +170,17 @@ class _MovieSheetState extends State<MovieSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: Iconify(
-                    Ri.heart_line,
-                    size: 32,
-                    color: Colors.white,
+                GestureDetector(
+                  onTap: _toggleFavorite,
+                  child: SizedBox(
+                    width: 30,
+                    height: 30,
+
+                    child: Iconify(
+                      _isFavorite ? Ri.heart_fill : Ri.heart_line,
+                      size: 32,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
 
@@ -172,10 +196,11 @@ class _MovieSheetState extends State<MovieSheet> {
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Iconify(
-                      Majesticons.bookmark_plus,
+                      Majesticons.bookmark_line,
                       size: 32,
-                      color: Colors.white,
-                    ),
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+
                   ),
                 )
               ],
