@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:iconify_flutter/iconify_flutter.dart';
+import 'package:iconify_flutter/icons/majesticons.dart';
 
 class CompanyMoviesSection extends StatefulWidget {
   final int movieId;
@@ -106,8 +108,12 @@ class _CompanyMoviesSectionState extends State<CompanyMoviesSection> {
                     )
                         : Container(
                       color: Colors.grey.shade800,
-                      child: const Center(
-                        child: Text("No image"),
+                      child: Center(
+                        child: Iconify(
+                          Majesticons.image_off,
+                          size: 32,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
                       ),
                     ),
                   ),
