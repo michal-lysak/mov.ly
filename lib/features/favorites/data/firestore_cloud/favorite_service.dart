@@ -5,6 +5,19 @@ class FavoriteService {
   final _db = FirebaseFirestore.instance;
   final _tmdb = TMDBService();
 
+  /// Check if movie is already in user's favorites
+Future<bool> isFavorite(String userId, int movieId) async {
+  final userRef = _db.collection('favoritesperuser').doc(userId);
+  final snap = await userRef.get();
+
+  if (!snap.exists) return false;
+
+  final favorites = List<Map>.from(snap.data()?['favorites'] ?? []);
+
+  return favorites.any((item) => item['id'] == movieId);
+}
+
+
   /// Ensure movie exists globally with keywords and counter
   Future<void> _ensureMovieExists(int movieId) async {
     final ref = _db.collection('favoritemovies').doc(movieId.toString());

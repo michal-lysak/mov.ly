@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import 'package:movly/features/movies/data/cache/backdrop_cache.dart';
 import 'package:movly/features/movies/presentation/widgets/production-company-movies-scroll.dart';
-import '../../../favorites/data/firestore_cloud/personal_favorites.dart';
+//import '../../../favorites/data/firestore_cloud/personal_favorites.dart';
 import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
@@ -19,7 +21,8 @@ class MovieSheet extends StatefulWidget {
 
 class _MovieSheetState extends State<MovieSheet> {
   final TMDBService _tmdbService = TMDBService();
-  final PersonalFavorites personalFavorites = PersonalFavorites();
+ // final PersonalFavorites personalFavorites = PersonalFavorites();
+  final FavoriteService favoriteService = FavoriteService();
 
   late PageController _pageController;
 
@@ -35,21 +38,53 @@ class _MovieSheetState extends State<MovieSheet> {
     _loadFavoriteStatus();
   }
 
- Future<void> _loadFavoriteStatus() async { // <<< ADDED
+  void _loadFavoriteStatus() async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return;
+
+  final fav = await favoriteService.isFavorite(userId, widget.movie.id);
+  setState(() {
+    _isFavorite = fav;
+  });
+}
+
+
+ /*Future<void> _loadFavoriteStatus() async { // <<< ADDED
     final fav = await personalFavorites.isFavorite(widget.movie.id);
     if (mounted) {
       setState(() {
         _isFavorite = fav ?? false;
       });
     }
-  }
+  }*/
 
-  Future<void> _toggleFavorite() async { // <<< ADDED
-    final newStatus = await personalFavorites.toggleFavorite(widget.movie.id);
-    if (mounted && newStatus != null) {
-      setState(() => _isFavorite = newStatus);
+ Future<void> _toggleFavorite(int movieId) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return;
+
+  try {
+    final alreadyFav = await favoriteService.isFavorite(userId, movieId);
+
+    if (alreadyFav) {
+      await favoriteService.unfavoriteMovie(userId, movieId);
+      setState(() {
+        _isFavorite = false;
+      });
+    } else {
+      await favoriteService.favoriteMovie(userId, movieId);
+      setState(() {
+        _isFavorite = true;
+      });
+    }
+  } catch (e) {
+    debugPrint('Error favoriting movie: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to favorite movie.')),
+      );
     }
   }
+}
 
   Future<void> _loadBackdrops() async {
     try {
@@ -171,7 +206,7 @@ class _MovieSheetState extends State<MovieSheet> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 GestureDetector(
-                  onTap: _toggleFavorite,
+                  onTap: () => _toggleFavorite(widget.movie.id),
                   child: SizedBox(
                     width: 30,
                     height: 30,
