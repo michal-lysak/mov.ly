@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-///import 'package:movly/features/favorites/data/firestore_cloud/favorites_counter_service.dart';
+import 'package:iconify_flutter/iconify_flutter.dart';
+import 'package:iconify_flutter/icons/ri.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
@@ -24,7 +26,10 @@ class _PreHomePageState extends State<PreHomePage> {
   bool _hasMore = true;
 
   List<Movie> _currentMovies = [];
-  Set<int> _selectedMovieIds = {}; // <- track selected movies
+  Set<int> _selectedMovieIds = {};
+
+  // Unused variable removed, or you can use it for scroll effects later
+  // double _titleOpacity = 1.0;
 
   @override
   void initState() {
@@ -35,7 +40,6 @@ class _PreHomePageState extends State<PreHomePage> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200 &&
         !_isLoading &&
@@ -49,7 +53,8 @@ class _PreHomePageState extends State<PreHomePage> {
     setState(() => _isLoading = true);
 
     try {
-      final newMovies = await tmdbService.fetchPopularMovies(page: _currentPage);
+      final newMovies =
+      await tmdbService.fetchPopularMovies(page: _currentPage);
 
       if (mounted) {
         setState(() {
@@ -77,7 +82,7 @@ class _PreHomePageState extends State<PreHomePage> {
       _currentMovies.clear();
       _currentPage = 1;
       _hasMore = true;
-      _selectedMovieIds.clear(); // clear selection on refresh
+      _selectedMovieIds.clear();
     });
     await _fetchMovies();
   }
@@ -106,6 +111,19 @@ class _PreHomePageState extends State<PreHomePage> {
     }
   }
 
+  Widget _buildShimmerTile() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade800,
+      highlightColor: Colors.grey.shade600,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -114,108 +132,146 @@ class _PreHomePageState extends State<PreHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectionCount = _selectedMovieIds.length;
+
     return Scaffold(
+      // Optional: Add a dark background color if not set in main theme
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           Column(
             children: [
-              const SizedBox(height: 25),
-              SafeArea(
+              // --- IMPROVED TOP SECTION ---
+              Container(
+                padding: const EdgeInsets.only(
+                    top: 60, bottom: 20, left: 20, right: 20),
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Mov.ly',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.lilyScriptOne(fontSize: 30),
+                      style: GoogleFonts.lilyScriptOne(
+                        color: theme.colorScheme.primary,
+                        fontSize: 36, // Increased size
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 50),
-                      child: Text(
+                    const SizedBox(height: 8),
+
+                    // Animated Text Switcher
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                      child: selectionCount == 0
+                          ? Text(
                         'Select your favorite movies',
+                        key: const ValueKey('instruction'),
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.kronaOne(fontSize: 24),
+                        style: GoogleFonts.afacad(
+                          fontSize: 18,
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      )
+                          : Container(
+                        key: const ValueKey('counter'),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3))
+                        ),
+                        child: Text(
+                          '$selectionCount selected',
+                          style: GoogleFonts.afacad(
+                            fontSize: 18,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              // --- END IMPROVED TOP SECTION ---
+
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshMovies,
-                  child: Stack(
-                    children: [
-                      GridView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(17),
-                        gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
-                          childAspectRatio: 0.7,
-                        ),
-                        itemCount: _currentMovies.length + (_hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _currentMovies.length) {
-                            return _isLoading
-                                ? const Center(child: CircularProgressIndicator())
-                                : const SizedBox.shrink();
-                          }
+                  child: GridView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Added bottom padding for button
+                    gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 0.7,
+                    ),
+                    itemCount: _currentMovies.length + (_hasMore ? 3 : 0),
+                    itemBuilder: (context, index) {
+                      if (index >= _currentMovies.length) {
+                        return _buildShimmerTile();
+                      }
 
-                          final movie = _currentMovies[index];
+                      final movie = _currentMovies[index];
+                      final isSelected = _selectedMovieIds.contains(movie.id);
 
-                          return GestureDetector(
-                            onTap: () => _toggleFavorite(movie.id),
+                      return GestureDetector(
+                        onTap: () => _toggleFavorite(movie.id),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? Border.all(color: theme.colorScheme.primary, width: 2)
+                                : null,
+                            boxShadow: isSelected
+                                ? [BoxShadow(color: theme.colorScheme.primary.withOpacity(0.4), blurRadius: 8)]
+                                : [],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
                                 CachedPosterImage.fromMovie(movie),
-                                if (_selectedMovieIds.contains(movie.id))
+                                if (isSelected)
                                   Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.favorite,
-                                      color: Theme.of(context).colorScheme.primary,
+                                    color: Colors.black.withOpacity(0.6),
+                                    child: Center(
+                                      child: Iconify(
+                                        Ri.heart_fill,
+                                        size: 35,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ),
                                   ),
                               ],
                             ),
-                          );
-                        },
-                      ),
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: 140,
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withOpacity(0.8),
-                                ],
-                              ),
-                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
             ],
           ),
+
+
           Positioned(
             left: 0,
             right: 0,
@@ -223,9 +279,9 @@ class _PreHomePageState extends State<PreHomePage> {
             child: Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 onPressed: () {
