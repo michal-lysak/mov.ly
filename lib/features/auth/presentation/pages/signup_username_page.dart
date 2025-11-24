@@ -1,0 +1,110 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
+import '../components/my_textfield.dart';
+
+class SignupUsernamePage extends StatefulWidget {
+  const SignupUsernamePage({super.key});
+
+  @override
+  State<SignupUsernamePage> createState() => _SignupUsernamePageState();
+}
+
+class _SignupUsernamePageState extends State<SignupUsernamePage> {
+  final userService = UserService();
+  final currentUser = FirebaseAuth.instance.currentUser;
+  String? errorMessage;
+
+
+
+
+  // text editing controller
+  final usernameController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // centers content vertically
+            children: [
+              Text(
+                'Create your unique username',
+                style: GoogleFonts.afacad(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24),
+              ),
+
+              const SizedBox(height: 20),
+
+              MyTextField(
+                controller: usernameController,
+                hintText: 'Username',
+                obscureText: false,
+              ),
+
+              SizedBox(height: 20),
+
+
+              if (errorMessage != null)
+                Text(
+                  errorMessage!,
+                  style: TextStyle(color: Colors.red),
+                ),
+
+              GestureDetector(
+                onTap: () async {
+                  final firebaseUser = FirebaseAuth.instance.currentUser;
+                  if (firebaseUser == null) return;
+
+                  try {
+                    await userService.setUsername(
+                      firebaseUser.uid,
+                      usernameController.text.trim(),
+                    );
+
+                    // ✅ Username set successfully → navigate
+                    if (mounted) {
+                      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                    }
+
+                  } catch (e) {
+                    // show error under the textfield
+                    setState(() {
+                      errorMessage = e.toString().replaceFirst('Exception: ', '');
+                    });
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+
+                  child: Center(
+                    child: Text(
+                      'Continue',
+                      textAlign: .center,
+                      style: GoogleFonts.afacad(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
