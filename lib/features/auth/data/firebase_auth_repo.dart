@@ -1,18 +1,11 @@
-/*
-
-FIREBASE IS OUR BACKEND - You can swap out any backend here..
-
-*/
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
 import '../domain/entities/app_user.dart';
 import '../domain/repos/auth_repo.dart';
 import 'firestore_cloud/user_service.dart';
 
 class FirebaseAuthRepo implements AuthRepo {
-  // access to firebase
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final UserService _userService = UserService();
 
@@ -20,101 +13,42 @@ class FirebaseAuthRepo implements AuthRepo {
   @override
   Future<AppUser?> loginWithEmailPassword(String email, String password) async {
     try {
-      // attempt sign in
-      UserCredential userCredential = await _firebaseAuth
-          .signInWithEmailAndPassword(email: email, password: password);
+      UserCredential userCredential = await _firebaseAuth.signInWithEmailAndPassword(
+          email: email, password: password);
 
-      // create user
-      AppUser user = AppUser(
+      final doc = await _userService.getUser(userCredential.user!.uid);
+      final data = doc?.data() as Map<String, dynamic>?;
+
+      return AppUser(
         uid: userCredential.user!.uid,
         email: email,
+        username: data?['username'], // nullable
       );
-
-      return user;
-    }
-
-    // catch any errors...
-    catch (e) {
+    } catch (e) {
       throw Exception('Login failed: $e');
     }
   }
 
   // REGISTER: Email & Password
   @override
-  Future<AppUser?> registerWithEmailPassword(
-      String name, String email, String password) async {
+  Future<AppUser?> registerWithEmailPassword(String name, String email, String password) async {
     try {
-      // attempt sign up
-      UserCredential userCredential = await _firebaseAuth
-          .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+          email: email, password: password);
 
-      // create user in firestore
       await _userService.createUser(
         userCredential.user!.uid,
         email: email,
-        //displayName: name,
+        // username will be null initially
       );
 
-      // create user
-      AppUser user = AppUser(uid: userCredential.user!.uid, email: email);
-
-      // return user
-      return user;
-    }
-
-    // any errors..
-    catch (e) {
+      return AppUser(
+        uid: userCredential.user!.uid,
+        email: email,
+        username: null,
+      );
+    } catch (e) {
       throw Exception('Registration failed: $e');
-    }
-  }
-
-  // DELETE ACCOUNT
-  @override
-  Future<void> deleteAccount() async {
-    try {
-      // get current user
-      final user = _firebaseAuth.currentUser;
-
-      // check if there is a logged in user
-      if (user == null) throw Exception('No user logged in..');
-
-      // delete account
-      await user.delete();
-
-      // logout
-      await logout();
-    } catch (e) {
-      throw Exception('Failed to delete account: $e');
-    }
-  }
-
-  // GET CURRENT USER
-  @override
-  Future<AppUser?> getCurrentUser() async {
-    // get current logged in user from firebase
-    final firebaseUser = _firebaseAuth.currentUser;
-
-    // no logged in user
-    if (firebaseUser == null) return null;
-
-    // logged in user exists
-    return AppUser(uid: firebaseUser.uid, email: firebaseUser.email!);
-  }
-
-  // LOGOUT
-  @override
-  Future<void> logout() async {
-    await _firebaseAuth.signOut();
-  }
-
-  // RESET PASSWORD
-  @override
-  Future<String> sendPasswordResetEmail(String email) async {
-    try {
-      await _firebaseAuth.sendPasswordResetEmail(email: email);
-      return "Password reset email sent! Check your inbox";
-    } catch (e) {
-      return "An error occured: $e";
     }
   }
 
@@ -122,49 +56,79 @@ class FirebaseAuthRepo implements AuthRepo {
   @override
   Future<AppUser?> signInWithGoogle() async {
     try {
-      // begin the interactive sign-in process
-      final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
-
-      // user cancelled sign-in
+      final gUser = await GoogleSignIn().signIn();
       if (gUser == null) return null;
 
-      // obtain auth details from request
-      final GoogleSignInAuthentication gAuth = await gUser.authentication;
+      final gAuth = await gUser.authentication;
 
-      // create a credential for the user
       final credential = GoogleAuthProvider.credential(
         accessToken: gAuth.accessToken,
         idToken: gAuth.idToken,
       );
 
-      // sign in with these credentials
-      UserCredential userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
-
-      // firebase user
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
       final firebaseUser = userCredential.user;
-
-      // user cancelled sign-in process
       if (firebaseUser == null) return null;
 
-      // if new user, create a new document in firestore
       if (userCredential.additionalUserInfo?.isNewUser ?? false) {
         await _userService.createUser(
           firebaseUser.uid,
           email: firebaseUser.email ?? '',
-          //displayName: firebaseUser.displayName,
+        );
+        return AppUser(
+          uid: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          username: null,
+        );
+      } else {
+        final doc = await _userService.getUser(firebaseUser.uid);
+        final data = doc?.data() as Map<String, dynamic>?;
+
+        return AppUser(
+          uid: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          username: data?['username'], // null if not set
         );
       }
-
-      AppUser appUser = AppUser(
-        uid: firebaseUser.uid,
-        email: firebaseUser.email ?? '',
-      );
-
-      return appUser;
     } catch (e) {
-      print(e);
+      debugPrint("Google Sign-In error: $e");
       return null;
+    }
+  }
+
+  @override
+  Future<AppUser?> getCurrentUser() async {
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) return null;
+
+    final doc = await _userService.getUser(firebaseUser.uid);
+    final data = doc?.data() as Map<String, dynamic>?;
+
+    return AppUser(
+      uid: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      username: data?['username'],
+    );
+  }
+
+  @override
+  Future<void> logout() async => _firebaseAuth.signOut();
+
+  @override
+  Future<void> deleteAccount() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) throw Exception('No user logged in.');
+    await user.delete();
+    await logout();
+  }
+
+  @override
+  Future<String> sendPasswordResetEmail(String email) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+      return "Password reset email sent!";
+    } catch (e) {
+      return "An error occurred: $e";
     }
   }
 }
