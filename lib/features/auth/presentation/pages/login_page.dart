@@ -5,6 +5,13 @@ import 'package:movly/features/auth/data/firebase_auth_repo.dart';
 import 'package:movly/features/auth/presentation/components/google_sign_in_button.dart';
 import 'package:movly/features/auth/presentation/components/my_button.dart';
 import 'package:movly/features/auth/presentation/components/my_textfield.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:movly/features/auth/data/firebase_auth_repo.dart';
+import 'package:movly/features/auth/presentation/components/google_sign_in_button.dart';
+import 'package:movly/features/auth/presentation/components/my_button.dart';
+import 'package:movly/features/auth/presentation/components/my_textfield.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -70,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 
-  // Google Sign-In
+// Google Sign-In
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
@@ -79,9 +86,15 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final user = await _authRepo.signInWithGoogle();
+
       if (user != null) {
-        // Navigate to home after login
-        Navigator.pushReplacementNamed(context, '/preHome');
+        if (user.username != null && user.username!.isNotEmpty) {
+          // If username exists, go straight to home
+          Navigator.pushReplacementNamed(context, '/preHome');
+        } else {
+          // Otherwise, ask user to create a username
+          Navigator.pushReplacementNamed(context, '/username');
+        }
       } else {
         setState(() => _errorMessage = "Google Sign-In cancelled.");
       }
@@ -92,13 +105,14 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+
   // forgot password box
 void openForgotPassword() {
   showDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text("Forgot Password"),
-      content: MyTextfield(
+      content: MyTextField(
           controller: emailController,
           hintText: "Enter email..",
           obscureText: false
@@ -199,7 +213,7 @@ void openForgotPassword() {
                     children: [
           
                     // email textfield
-                    MyTextfield(
+                    MyTextField(
                       controller: emailController,
                       hintText: "Email",
                       obscureText: false,
@@ -208,7 +222,7 @@ void openForgotPassword() {
                     const SizedBox(height: 10),
           
                     //pw textfield
-                    MyTextfield(
+                    MyTextField(
                       controller: pwController,
                       hintText: "Password",
                       obscureText: true,
