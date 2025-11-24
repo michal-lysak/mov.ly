@@ -141,9 +141,7 @@ class _MovieSheetState extends State<MovieSheet> {
 
             SizedBox(
               height: 200,
-              child: _isLoading && _backdropPaths.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : PageView.builder(
+              child: PageView.builder(
                 controller: _pageController,
                 itemCount: _backdropPaths.length,
                 physics: const BouncingScrollPhysics(),
@@ -311,21 +309,10 @@ class _MovieSheetState extends State<MovieSheet> {
           borderRadius: BorderRadius.circular(10),
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: Image.network(
-              'https://image.tmdb.org/t/p/w780${_backdropPaths[index]}',
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return const Center(child: CircularProgressIndicator());
-              },
-              errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey.shade800,
-                child: const Icon(Icons.broken_image, size: 48),
-              ),
+            child: CachedBackdropImage.fromMovie(widget.movie),
             ),
           ),
         ),
-      ),
     );
   }
 }
