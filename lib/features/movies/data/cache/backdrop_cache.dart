@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
+import 'package:shimmer/shimmer.dart';
 
 class CachedBackdropImage extends StatelessWidget {
   final String imageUrl;
@@ -36,12 +37,16 @@ class CachedBackdropImage extends StatelessWidget {
         fit: fit,
         width: double.infinity,
         height: double.infinity,
-        placeholder: (_, __) => Container(
-          color: Colors.black12,
-          child: const Center(
-            child: CircularProgressIndicator(strokeWidth: 2),
+        placeholder: (_, __) => Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.white,
           ),
         ),
+
         errorWidget: (_, __, ___) => Container(
           color: Colors.black26,
           child: const Icon(Icons.landscape, color: Colors.white38, size: 46),
