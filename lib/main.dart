@@ -29,14 +29,10 @@ class MyApp extends StatelessWidget {
       title: 'Mov.ly',
       theme: darkMode,
 
-      // 🎯 Set the home to the AuthGate. It handles whether to show
       // LoginOrRegister (logged out) or Home (logged in).
       home: const AuthGate(),
 
-      // Keep the routes for navigation WITHIN the app,
-      // but remove the redundant 'login' route.
       routes: {
-        // Assuming LikingTitles is the actual widget for the '/preHome' route:
         '/preHome': (context) => const PreHomePage(),
         '/home': (context) => const HomePage(),
         '/username': (context) => const SignupUsernamePage(),
