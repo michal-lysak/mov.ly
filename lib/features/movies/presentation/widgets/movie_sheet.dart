@@ -21,7 +21,6 @@ class MovieSheet extends StatefulWidget {
 
 class _MovieSheetState extends State<MovieSheet> {
   final TMDBService _tmdbService = TMDBService();
- // final PersonalFavorites personalFavorites = PersonalFavorites();
   final FavoriteService favoriteService = FavoriteService();
 
   late PageController _pageController;
@@ -39,52 +38,43 @@ class _MovieSheetState extends State<MovieSheet> {
   }
 
   void _loadFavoriteStatus() async {
-  final userId = FirebaseAuth.instance.currentUser?.uid;
-  if (userId == null) return;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
-  final fav = await favoriteService.isFavorite(userId, widget.movie.id);
-  setState(() {
-    _isFavorite = fav;
-  });
-}
+    final fav = await favoriteService.isFavorite(userId, widget.movie.id);
+    setState(() {
+      _isFavorite = fav;
+    });
+  }
 
 
- /*Future<void> _loadFavoriteStatus() async { // <<< ADDED
-    final fav = await personalFavorites.isFavorite(widget.movie.id);
-    if (mounted) {
-      setState(() {
-        _isFavorite = fav ?? false;
-      });
-    }
-  }*/
+  Future<void> _toggleFavorite(int movieId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
- Future<void> _toggleFavorite(int movieId) async {
-  final userId = FirebaseAuth.instance.currentUser?.uid;
-  if (userId == null) return;
+    try {
+      final alreadyFav = await favoriteService.isFavorite(userId, movieId);
 
-  try {
-    final alreadyFav = await favoriteService.isFavorite(userId, movieId);
-
-    if (alreadyFav) {
-      await favoriteService.unfavoriteMovie(userId, movieId);
-      setState(() {
-        _isFavorite = false;
-      });
-    } else {
-      await favoriteService.favoriteMovie(userId, movieId);
-      setState(() {
-        _isFavorite = true;
-      });
-    }
-  } catch (e) {
-    debugPrint('Error favoriting movie: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to favorite movie.')),
-      );
+      if (alreadyFav) {
+        await favoriteService.unfavoriteMovie(userId, movieId);
+        setState(() {
+          _isFavorite = false;
+        });
+      } else {
+        await favoriteService.favoriteMovie(userId, movieId);
+        setState(() {
+          _isFavorite = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error favoriting movie: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to favorite movie.')),
+        );
+      }
     }
   }
-}
 
   Future<void> _loadBackdrops() async {
     try {
@@ -132,161 +122,164 @@ class _MovieSheetState extends State<MovieSheet> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         ),
         child: SingleChildScrollView(
-        controller: controller,
-        padding: const EdgeInsets.only(bottom: 40),
-        child: Column(
-          crossAxisAlignment: .start,
-          children: [
-            const SizedBox(height: 20),
+          controller: controller,
+          padding: const EdgeInsets.only(bottom: 40),
+          child: Column(
+            crossAxisAlignment: .start,
+            children: [
+              const SizedBox(height: 20),
 
-            SizedBox(
-              height: 200,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _backdropPaths.length,
-                physics: const BouncingScrollPhysics(),
-                itemBuilder: (context, index) {
-                  return _buildCarouselItem(index);
-                },
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            Center(
-              child: Text(
-                widget.movie.title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.bebasNeue(
-                  fontSize: 32,
-                  height: 0.9,
+              SizedBox(
+                height: 200,
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _backdropPaths.length,
+                  physics: const BouncingScrollPhysics(),
+                  itemBuilder: (context, index) {
+                    return _buildCarouselItem(index);
+                  },
                 ),
               ),
-            ),
 
-            const SizedBox(height: 15),
+              const SizedBox(height: 15),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: widget.movie.categories.take(3).map((cat) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: SizedBox(
-                    width: 80,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Colors.grey.shade300.withOpacity(0.3),
-                          width: 1,
+              Center(
+                child: Text(
+                  widget.movie.title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.bebasNeue(
+                    fontSize: 32,
+                    height: 0.9,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: widget.movie.categories.take(3).map((cat) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 80,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.grey.shade300.withOpacity(0.3),
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      child: Text(
-                        cat,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.afacad(
-                          fontSize: 16,
-                          color: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Text(
+                          cat,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.afacad(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
+                  );
+                }).toList(),
+              ),
 
-            const SizedBox(height: 15),
+              const SizedBox(height: 15),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () => _toggleFavorite(widget.movie.id),
-                  child: SizedBox(
-                    width: 30,
-                    height: 30,
-
-                    child: Iconify(
-                      _isFavorite ? Ri.heart_fill : Ri.heart_line,
-                      size: 32,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 10),
-
-                Container(
-                  height: 50,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Iconify(
-                      Majesticons.bookmark_line,
-                      size: 32,
-                      color: Theme.of(context).colorScheme.primary,
-                    )
-
-                  ),
-                )
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: .start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Overview',
-                    textAlign: .start,
-                    style: GoogleFonts.afacad(
-                      fontSize: 32,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  GestureDetector(
+                    onTap: () => _toggleFavorite(widget.movie.id),
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+
+                      child: Iconify(
+                        _isFavorite ? Ri.heart_fill : Ri.heart_line,
+                        size: 32,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  ExpandableText(
-                    text: widget.movie.overview,
-                    maxLines: 2, // optional, used in widget if you want
-                  ),
+
+                  const SizedBox(width: 10),
+
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Iconify(
+                          Majesticons.bookmark_line,
+                          size: 32,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+
+                    ),
+                  )
                 ],
-            ),
-            ),
+              ),
 
-            SizedBox(height: 20),
+              const SizedBox(height: 10),
 
-            Center(
-              child: Text(
-                "More from production",
-                style: GoogleFonts.afacad(
-                  fontSize: 24,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: .start,
+                  children: [
+                    Text(
+                      'Overview',
+                      textAlign: .start,
+                      style: GoogleFonts.afacad(
+                        fontSize: 32,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ExpandableText(
+                      text: widget.movie.overview,
+                      maxLines: 2, // optional, used in widget if you want
+                    ),
+                  ],
                 ),
               ),
-            ),
-            CompanyMoviesSection(
-              movieId: widget.movie.id,
-              productionCompanies: widget.movie.productionCompanies,
-            ),
 
-          ],
+              const SizedBox(height: 20),
+
+              Center(
+                child: Text(
+                  "More from production",
+                  style: GoogleFonts.afacad(
+                    fontSize: 24,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              CompanyMoviesSection(
+                movieId: widget.movie.id,
+                productionCompanies: widget.movie.productionCompanies,
+              ),
+
+            ],
+          ),
         ),
-      ),
-    ),);
+      ),);
   }
 
   Widget _buildCarouselItem(int index) {
+    // FIX 2: Get the specific backdrop path from the list
+    final backdropPath = _backdropPaths[index];
+
     return AnimatedBuilder(
       animation: _pageController,
       builder: (context, child) {
@@ -309,10 +302,10 @@ class _MovieSheetState extends State<MovieSheet> {
           borderRadius: BorderRadius.circular(10),
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: CachedBackdropImage.fromMovie(widget.movie),
-            ),
+            child: CachedBackdropImage.fromPath(backdropPath),
           ),
         ),
+      ),
     );
   }
 }
@@ -367,4 +360,3 @@ class _ExpandableTextState extends State<ExpandableText> {
     );
   }
 }
-
