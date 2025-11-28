@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-
+import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
 import '../components/my_textfield.dart';
 
 class SignupUsernamePage extends StatefulWidget {
@@ -14,15 +12,17 @@ class SignupUsernamePage extends StatefulWidget {
 }
 
 class _SignupUsernamePageState extends State<SignupUsernamePage> {
-  final userService = UserService();
-  final currentUser = FirebaseAuth.instance.currentUser;
+  final UserService userService = UserService();
   String? errorMessage;
 
-
-
-
-  // text editing controller
+  // Text editing controller
   final usernameController = TextEditingController();
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,13 +49,12 @@ class _SignupUsernamePageState extends State<SignupUsernamePage> {
                 obscureText: false,
               ),
 
-              SizedBox(height: 20),
-
+              const SizedBox(height: 20),
 
               if (errorMessage != null)
                 Text(
                   errorMessage!,
-                  style: TextStyle(color: Colors.red),
+                  style: const GoogleFonts.afacad(color: Colors.red),
                 ),
 
               GestureDetector(
@@ -64,20 +63,29 @@ class _SignupUsernamePageState extends State<SignupUsernamePage> {
                   if (firebaseUser == null) return;
 
                   try {
+                    // Check if the username is empty first
+                    if (usernameController.text.trim().isEmpty) {
+                      setState(() {
+                        errorMessage = 'Username cannot be empty.';
+                      });
+                      return;
+                    }
+
+                    // Attempt to set the username in Firestore
                     await userService.setUsername(
                       firebaseUser.uid,
                       usernameController.text.trim(),
                     );
 
-                    // ✅ Username set successfully → navigate
+                    // ✅ Username set successfully
                     if (mounted) {
-                      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                      Navigator.pushNamedAndRemoveUntil(context, '/preHome', (route) => false);
                     }
 
                   } catch (e) {
                     // show error under the textfield
                     setState(() {
-                      errorMessage = e.toString().replaceFirst('Exception: ', '');
+                      errorMessage = e.toString().replaceFirst('Exception: ', 'Error: ');
                     });
                   }
                 },
@@ -107,4 +115,3 @@ class _SignupUsernamePageState extends State<SignupUsernamePage> {
     );
   }
 }
-
