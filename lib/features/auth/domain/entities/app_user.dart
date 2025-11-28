@@ -2,11 +2,13 @@ class AppUser {
   final String uid;
   final String email;
   final String? username;
+  final String? name;
 
   AppUser({
     required this.uid,
     required this.email,
     required this.username,
+    required this.name
   });
 
   // convert app user -> json
@@ -14,7 +16,8 @@ class AppUser {
     return {
       'uid': uid,
       'email': email,
-      'username': username
+      'username': username,
+      'name': name
     };
   }
 
@@ -24,6 +27,7 @@ class AppUser {
       uid: jsonUser['uid'],
       email: jsonUser['email'],
       username: jsonUser['username'],
+      name: jsonUser['name']
     );
   }
 }
