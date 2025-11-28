@@ -23,6 +23,7 @@ class FirebaseAuthRepo implements AuthRepo {
         uid: userCredential.user!.uid,
         email: email,
         username: data?['username'], // nullable
+        name: data?['name'],
       );
     } catch (e) {
       throw Exception('Login failed: $e');
@@ -39,6 +40,7 @@ class FirebaseAuthRepo implements AuthRepo {
       await _userService.createUser(
         userCredential.user!.uid,
         email: email,
+        name: name,
         // username will be null initially
       );
 
@@ -46,6 +48,7 @@ class FirebaseAuthRepo implements AuthRepo {
         uid: userCredential.user!.uid,
         email: email,
         username: null,
+        name: name,
       );
     } catch (e) {
       throw Exception('Registration failed: $e');
@@ -79,6 +82,7 @@ class FirebaseAuthRepo implements AuthRepo {
           uid: firebaseUser.uid,
           email: firebaseUser.email ?? '',
           username: null,
+          name: null,
         );
       } else {
         final doc = await _userService.getUser(firebaseUser.uid);
@@ -88,6 +92,7 @@ class FirebaseAuthRepo implements AuthRepo {
           uid: firebaseUser.uid,
           email: firebaseUser.email ?? '',
           username: data?['username'], // null if not set
+          name: data?['name'],
         );
       }
     } catch (e) {
@@ -108,6 +113,7 @@ class FirebaseAuthRepo implements AuthRepo {
       uid: firebaseUser.uid,
       email: firebaseUser.email ?? '',
       username: data?['username'],
+      name: data?['name'],
     );
   }
 
