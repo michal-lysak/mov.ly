@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:iconify_flutter/iconify_flutter.dart';
+import 'package:iconify_flutter/icons/ri.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
+import 'package:movly/features/movies/presentation/home/home_page.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_sheet.dart';
 import '../../data/cache/backdrop_cache.dart';
 import '../../data/models/movie.dart';
@@ -12,7 +15,9 @@ import '../widgets/horizontal-posters-scrolling.dart';
 import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+  final VoidCallback onOpenLiked;
+
+  const HomeTab({super.key, required this.onOpenLiked});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -152,12 +157,26 @@ class _HomeTabState extends State<HomeTab> {
               // HEADER
               Padding(
                 padding: const EdgeInsets.fromLTRB(15, 20, 15, 16),
-                child: Text(
-                  'Home',
-                  style: GoogleFonts.afacad(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Home',
+                      style: GoogleFonts.afacad(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: widget.onOpenLiked,
+                      child: Iconify(
+                        Ri.heart_fill,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
+                    )
+                  ],
                 ),
               ),
 
@@ -236,7 +255,7 @@ class _HomeTabState extends State<HomeTab> {
                 },
               ),
               const SizedBox(height: 20),
-              
+
               MovieCarousel(
                   title: 'Now in Cinemas',
                   moviesFuture: _tmdbService.fetchNowPlayingMovies()
