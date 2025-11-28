@@ -91,23 +91,36 @@ class _PreHomePageState extends State<PreHomePage> {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
+    final bool wasSelected = _selectedMovieIds.contains(movieId);
+    setState(() {
+      if (wasSelected) {
+        _selectedMovieIds.remove(movieId);
+      } else {
+        _selectedMovieIds.add(movieId);
+      }
+    });
+
     try {
-      if (_selectedMovieIds.contains(movieId)) {
+      if (wasSelected) {
         await favoriteService.unfavoriteMovie(userId, movieId);
-        setState(() {
-          _selectedMovieIds.remove(movieId);
-        });
       } else {
         await favoriteService.favoriteMovie(userId, movieId);
-        setState(() {
-          _selectedMovieIds.add(movieId);
-        });
       }
     } catch (e) {
       debugPrint('Error favoriting movie: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to favorite movie.')),
-      );
+      // If the network call fails, revert the local state change
+      if (mounted) {
+        setState(() {
+          if (wasSelected) {
+            _selectedMovieIds.add(movieId); // Revert unfavorite
+          } else {
+            _selectedMovieIds.remove(movieId); // Revert favorite
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorite status.')),
+        );
+      }
     }
   }
 
@@ -136,13 +149,11 @@ class _PreHomePageState extends State<PreHomePage> {
     final selectionCount = _selectedMovieIds.length;
 
     return Scaffold(
-      // Optional: Add a dark background color if not set in main theme
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           Column(
             children: [
-              // --- IMPROVED TOP SECTION ---
               Container(
                 padding: const EdgeInsets.only(
                     top: 60, bottom: 20, left: 20, right: 20),
@@ -205,7 +216,6 @@ class _PreHomePageState extends State<PreHomePage> {
                   ],
                 ),
               ),
-              // --- END IMPROVED TOP SECTION ---
 
               Expanded(
                 child: RefreshIndicator(
