@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../movies/data/models/movie.dart';
 import '../../../movies/data/services/tmdb_service.dart';
 
 class FavoriteService {
@@ -6,16 +7,16 @@ class FavoriteService {
   final _tmdb = TMDBService();
 
   /// Check if movie is already in user's favorites
-Future<bool> isFavorite(String userId, int movieId) async {
-  final userRef = _db.collection('favoritesperuser').doc(userId);
-  final snap = await userRef.get();
+  Future<bool> isFavorite(String userId, int movieId) async {
+    final userRef = _db.collection('favoritesperuser').doc(userId);
+    final snap = await userRef.get();
 
-  if (!snap.exists) return false;
+    if (!snap.exists) return false;
 
-  final favorites = List<Map>.from(snap.data()?['favorites'] ?? []);
+    final favorites = List<Map>.from(snap.data()?['favorites'] ?? []);
 
-  return favorites.any((item) => item['id'] == movieId);
-}
+    return favorites.any((item) => item['id'] == movieId);
+  }
 
 
   /// Ensure movie exists globally with keywords and counter
@@ -73,5 +74,22 @@ Future<bool> isFavorite(String userId, int movieId) async {
     await _db.collection('favoritemovies')
         .doc(movieId.toString())
         .update({'favoritesCount': FieldValue.increment(-1)});
+  }
+
+  Future<List<Movie?>> fetchFavoriteMovies(String userId) async {
+    final userRef = _db.collection('favoritesperuser').doc(userId);
+    final snap = await userRef.get();
+
+    if (!snap.exists || snap.data()?['favorites'] == null) return [];
+
+    final favorites = List<Map<String, dynamic>>.from(snap.data()?['favorites']);
+    final movieIds = favorites.map((f) => f['id'] as int).toList();
+
+    // Fetch all movies in parallel for faster loading
+    final movies = await Future.wait(
+        movieIds.map((id) => _tmdb.fetchMovieById(id))
+    );
+
+    return movies;
   }
 }
