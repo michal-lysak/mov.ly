@@ -54,7 +54,7 @@ class _SignupUsernamePageState extends State<SignupUsernamePage> {
               if (errorMessage != null)
                 Text(
                   errorMessage!,
-                  style: const GoogleFonts.afacad(color: Colors.red),
+                  style: GoogleFonts.afacad(color: Colors.red),
                 ),
 
               GestureDetector(
