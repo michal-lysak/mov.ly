@@ -12,7 +12,8 @@ class UserService {
   Future<void> createUser(
       String userId, {
         required String email,
-        String? username, // optional
+        String? username,
+        String? name,
       }) async {
     try {
       final data = {
