@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import '../../../auth/data/firestore_cloud/user_service.dart';
 import '../../../movies/data/models/movie.dart';
 
 class UserProfileTab extends StatefulWidget {
-  final String uid;
+  final String userId;
   final VoidCallback onBack;
 
-  const UserProfileTab({super.key, required this.uid, required this.onBack});
+  const UserProfileTab({super.key, required this.userId, required this.onBack});
 
   @override
   State<UserProfileTab> createState() => _UserProfileTabState();
@@ -15,6 +16,7 @@ class UserProfileTab extends StatefulWidget {
 
 class _UserProfileTabState extends State<UserProfileTab> {
   final _userService = UserService();
+  final _favService = FavoriteService();
   Map<String, dynamic>? _profile;
   List<Movie?> _favorites = [];
   bool _isLoading = true;
@@ -26,8 +28,8 @@ class _UserProfileTabState extends State<UserProfileTab> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await _userService.getUserProfile(widget.uid);
-    final favorites = await _userService.getUserFavorites(widget.uid);
+    final profile = await _userService.getUserProfile(widget.userId);
+    final favorites = await _favService.fetchFavoriteMovies(widget.userId);
 
     setState(() {
       _profile = profile;

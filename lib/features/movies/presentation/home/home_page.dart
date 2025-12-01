@@ -27,7 +27,8 @@ class _HomePageState extends State<HomePage>
   bool get wantKeepAlive => true;
 
   int index = 0;
-  final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final userId = FirebaseAuth.instance.currentUser!.uid;
+
 
   // Social tab can show profile dynamically
   Widget? _currentProfileTab;

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import '../../../movies/data/models/movie.dart';
 import '../../../movies/data/services/tmdb_service.dart';
 
@@ -77,6 +78,7 @@ class FavoriteService {
   }
 
   Future<List<Movie?>> fetchFavoriteMovies(String userId) async {
+    debugPrint("favMovies: $userId");
     final userRef = _db.collection('favoritesperuser').doc(userId);
     final snap = await userRef.get();
 
@@ -91,6 +93,7 @@ class FavoriteService {
     );
 
     Future<List<int>> getFavoritesOfUser(String userId) async {
+
       final userRef = _db.collection('favoritesperuser').doc(userId);
       final snap = await userRef.get();
 

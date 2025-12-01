@@ -10,17 +10,15 @@ import '../../../movies/data/services/tmdb_service.dart';
     FirebaseFirestore.instance.collection('users');
     final CollectionReference _usernamesCollection =
     FirebaseFirestore.instance.collection('usernames');
-    final CollectionReference _favoritesCollection =
-    FirebaseFirestore.instance.collection('favoritesperuser');
 
-    final TMDBService _tmdb = TMDBService(); // <-- add this
-    /// Creates a new user document WITHOUT username
-    Future<void> createUser(
-        String userId, {
-          required String email,
-          String? username,
-          String? name,
-        }) async {
+    final TMDBService _tmdb = TMDBService();
+
+    /// Creates a new user document
+    Future<void> createUser(String userId, {
+      required String email,
+      String? username,
+      String? name,
+    }) async {
       try {
         final data = {
           'email': email,
@@ -47,42 +45,43 @@ import '../../../movies/data/services/tmdb_service.dart';
         final currentUserDoc = _usersCollection.doc(userId);
         final currentUser = await currentUserDoc.get();
 
-  // If user doc doesn't exist, create it
+        // If user doc doesn't exist, create it
         if (!currentUser.exists) {
           await currentUserDoc.set({'createdAt': FieldValue.serverTimestamp()});
         }
 
         final currentData = currentUser.data() as Map<String, dynamic>?;
 
-  // Remove old username if exists
+        // Remove old username if exists
         if (currentData != null && currentData.containsKey('username')) {
           final oldUsername = currentData['username'] as String;
           await _usernamesCollection.doc(oldUsername.toLowerCase()).delete();
         }
 
-  // Add new username
+        // Add new username
         await _usernamesCollection.doc(username.toLowerCase()).set({
           'uid': userId,
           'username': username,
         });
 
-  // Update user
+        // Update user
         await currentUserDoc.set(
           {'username': username},
           SetOptions(merge: true),
         );
-
       } catch (e) {
         debugPrint('Error setting username: $e');
         rethrow;
       }
-      }
+    }
 
 
     /// Checks if a username is available
     Future<bool> isUsernameAvailable(String username) async {
       try {
-        final doc = await _usernamesCollection.doc(username.toLowerCase()).get();
+        final doc = await _usernamesCollection
+            .doc(username.toLowerCase())
+            .get();
         return !doc.exists;
       } catch (e) {
         debugPrint('Error checking username: $e');
@@ -111,7 +110,8 @@ import '../../../movies/data/services/tmdb_service.dart';
           .limit(20)
           .get();
 
-      return snap.docs.map((doc) => {
+      return snap.docs.map((doc) =>
+      {
         ...doc.data(),
         'uid': doc.id,
       }).toList();
@@ -120,40 +120,22 @@ import '../../../movies/data/services/tmdb_service.dart';
     /// Fetch full user profile after clicking
     Future<Map<String, dynamic>?> getUserProfile(String uid) async {
       try {
-        final snap = await _usernamesCollection
-            .where('uid', isEqualTo: uid)
-            .limit(1)
-            .get();
+        debugPrint("profile: $uid");
+        // 1. Direct Target: Go straight to the document using the ID
+        final doc = await _usernamesCollection.doc(uid).get();
 
-        if (snap.docs.isEmpty) return null;
+        // 2. Check Existence
+        if (!doc.exists) return null;
 
-        final doc = snap.docs.first;
+        // 3. Extract Data
         final data = doc.data() as Map<String, dynamic>?;
         if (data == null) return null;
 
+        // 4. Return merged data
         return {...data, 'uid': uid};
       } catch (e) {
         debugPrint('Error fetching profile: $e');
         return null;
       }
     }
-
-
-
-    /// Fetch user's favorite movies
-    Future<List<Movie?>> getUserFavorites(String uid) async {
-      final doc = await _favoritesCollection.doc(uid).get();
-      if (!doc.exists) return [];
-
-      final data = doc.data() as Map<String, dynamic>?; // cast here
-      if (data == null || data['favorites'] == null) return [];
-
-      final favorites = List<Map<String, dynamic>>.from(data['favorites']);
-      final movieIds = favorites.map((f) => f['id'] as int).toList();
-
-      final movies = await Future.wait(movieIds.map((id) => _tmdb.fetchMovieById(id)));
-      return movies;
-    }
-
-
   }
