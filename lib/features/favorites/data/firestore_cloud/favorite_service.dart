@@ -90,6 +90,26 @@ class FavoriteService {
         movieIds.map((id) => _tmdb.fetchMovieById(id))
     );
 
+    Future<List<int>> getFavoritesOfUser(String userId) async {
+      final userRef = _db.collection('favoritesperuser').doc(userId);
+      final snap = await userRef.get();
+
+      if (!snap.exists || snap.data()?['favorites'] == null) {
+        return [];
+      }
+
+      final favorites = List<Map<String, dynamic>>.from(
+        snap.data()?['favorites'] ?? [],
+      );
+
+      return favorites.map((f) => f['id'] as int).toList();
+    }
+
+    Future<List<Movie?>> fetchFavoriteMoviesOfUser(String userId) {
+      return fetchFavoriteMovies(userId);
+    }
+
+
     return movies;
   }
 }

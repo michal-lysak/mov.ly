@@ -3,29 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/favorites/model/favorite_movie_model.dart';
+import 'package:movly/features/movies/presentation/UserProfile/user_profile_tab.dart';
 import 'package:movly/features/movies/presentation/home/personal_liked_movies_page.dart';
+import 'package:movly/features/movies/presentation/social/social_tab.dart';
 import '../../data/models/movie.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_card.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/presentation/widgets/navbar_btn.dart';
 import '../discover/discover_tab.dart';
 import 'home_tab.dart';
-
-// Placeholder for the third tab (optional)
-class PlaceholderPage extends StatelessWidget {
-  const PlaceholderPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text(
-          'Users/Social Tab (Placeholder)',
-          style: GoogleFonts.afacad(),
-        ),
-      ),
-    );
-  }
-}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -36,12 +22,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
+
   @override
   bool get wantKeepAlive => true;
 
   int index = 0;
-
   final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  // Social tab can show profile dynamically
+  Widget? _currentProfileTab;
 
   void _openLikedMovies() {
     Navigator.push(
@@ -52,16 +41,28 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  void openUserProfile(String uid) {
+    setState(() {
+      _currentProfileTab = UserProfileTab(
+        uid: uid,
+        onBack: () {
+          setState(() {
+            _currentProfileTab = null; // go back to SocialTab
+          });
+        },
+      );
+      index = 2; // switch to SocialTab position
+    });
+  }
+
   // Custom function to handle back button press on the HomePage/App Exit
   Future<bool> _onWillPop() async {
-    // If we are not on the main HomeTab (index 0), switch back to it.
     if (index != 0) {
       setState(() {
         index = 0;
       });
-      return false; // Prevent exit
+      return false;
     }
-    // If we are on HomeTab (index 0), allow exit/pop to previous screen
     return true;
   }
 
@@ -72,7 +73,7 @@ class _HomePageState extends State<HomePage>
     final pages = [
       HomeTab(onOpenLiked: _openLikedMovies),
       const DiscoverPage(),
-      const PlaceholderPage(),
+      _currentProfileTab ?? SocialTab(onUserTap: openUserProfile),
     ];
 
     return PopScope(
