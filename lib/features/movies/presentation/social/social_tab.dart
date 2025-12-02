@@ -40,7 +40,7 @@ class _SocialTabState extends State<SocialTab> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(15, 20, 15, 16),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 35),
             child: Row(
               children: [
                 Text(
