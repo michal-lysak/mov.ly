@@ -151,11 +151,13 @@ class _HomeTabState extends State<HomeTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: 40),
               // HEADER
               Padding(
-                padding: const EdgeInsets.fromLTRB(15, 20, 15, 16),
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
                 child: Row(
                   children: [
+
                     Text(
                       'Home',
                       style: GoogleFonts.afacad(
@@ -163,6 +165,8 @@ class _HomeTabState extends State<HomeTab> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+
+
 
                     const Spacer(),
                     GestureDetector(
@@ -176,7 +180,7 @@ class _HomeTabState extends State<HomeTab> {
                   ],
                 ),
               ),
-
+              SizedBox(height: 20),
               // FOR YOU CAROUSEL
               StreamBuilder<List<String>>(
                 stream: _forYouService.streamForYouList(user.uid),
