@@ -22,20 +22,25 @@ class SearchingBar extends StatelessWidget {
         // Search bar
         Expanded(
           child: Container(
+            height: 40,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondary,
-              borderRadius: BorderRadius.circular(15),
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: TextField(
               controller: controller,
               onChanged: onChanged,
               style: const TextStyle(color: Colors.white),
+
+              textAlignVertical: TextAlignVertical.center, // centers baseline
+
               decoration: InputDecoration(
                 hintText: hintText,
                 hintStyle: TextStyle(color: Colors.grey.shade400),
+
                 prefixIcon: Padding(
-                  padding: const EdgeInsets.all(10.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   child: SvgPicture.asset(
                     'lib/assets/icons/search-line.svg',
                     color: Colors.grey,
@@ -43,36 +48,18 @@ class SearchingBar extends StatelessWidget {
                     height: 20,
                   ),
                 ),
+
                 prefixIconConstraints: const BoxConstraints(
-                  minWidth: 25,
-                  minHeight: 25,
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
+
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                contentPadding: EdgeInsets.zero,
               ),
             ),
-          ),
-        ),
 
-        const SizedBox(width: 10),
-
-        // Filter button
-        InkWell(
-          onTap: onFilterPressed,
-          borderRadius: BorderRadius.circular(15),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondary,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: SvgPicture.asset(
-              'lib/assets/icons/filter-line.svg',
-              color: Colors.white,
-              width: 20,
-              height: 20,
-            ),
           ),
         ),
       ],
