@@ -70,7 +70,7 @@ class _SocialTabState extends State<SocialTab> {
                 final user = _results[index];
                 return GestureDetector(
                   onTap: () {
-                    widget.onUserTap(user['uid']);
+                    widget.onUserTap(user['username']);
                   },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),

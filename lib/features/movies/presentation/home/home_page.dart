@@ -42,10 +42,10 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  void openUserProfile(String uid) {
+  void openUserProfile(String username) {
     setState(() {
       _currentProfileTab = UserProfileTab(
-        uid: uid,
+        username: username, // now correct
         onBack: () {
           setState(() {
             _currentProfileTab = null; // go back to SocialTab
@@ -55,6 +55,7 @@ class _HomePageState extends State<HomePage>
       index = 2; // switch to SocialTab position
     });
   }
+
 
   // Custom function to handle back button press on the HomePage/App Exit
   Future<bool> _onWillPop() async {

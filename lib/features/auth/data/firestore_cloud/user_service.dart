@@ -99,7 +99,7 @@ import '../../../movies/data/services/tmdb_service.dart';
       }
     }
 
-    /// Search users by username
+    /// Search users by username prefix
     Future<List<Map<String, dynamic>>> searchUsers(String query) async {
       if (query.isEmpty) return [];
 
@@ -110,31 +110,38 @@ import '../../../movies/data/services/tmdb_service.dart';
           .limit(20)
           .get();
 
-      return snap.docs.map((doc) =>
-      {
-        ...doc.data(),
-        'uid': doc.id,
+      return snap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'name': data['name'],
+          'username': data['username'],
+          'uid': data['uid'],
+        };
       }).toList();
     }
 
-    /// Fetch full user profile after clicking
-    Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    /// Get full profile by username
+    Future<Map<String, dynamic>?> getUserProfileByUsername(
+        String username) async {
       try {
-        debugPrint("profile: $uid");
-        // 1. Direct Target: Go straight to the document using the ID
-        final doc = await _usernamesCollection.doc(uid).get();
+        final doc = await _firestore
+            .collection('usernames')
+            .doc(username)
+            .get();
 
-        // 2. Check Existence
         if (!doc.exists) return null;
 
-        // 3. Extract Data
         final data = doc.data() as Map<String, dynamic>?;
         if (data == null) return null;
 
-        // 4. Return merged data
-        return {...data, 'uid': uid};
+        // Return all three fields + ensure UID is included
+        return {
+          'name': data['name'],
+          'username': data['username'],
+          'uid': data['uid'],
+        };
       } catch (e) {
-        debugPrint('Error fetching profile: $e');
+        debugPrint('Error fetching profile by username: $e');
         return null;
       }
     }
