@@ -53,10 +53,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 35),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: 40),
               Text(
                 'Discover',
                 style: GoogleFonts.afacad(
