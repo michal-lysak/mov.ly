@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/majesticons.dart';
+import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import '../../data/models/movie.dart';
+import '../../data/services/tmdb_service.dart';
+import 'movie_sheet.dart';
 
 class VerticalMovieGrid extends StatelessWidget {
   final List<Movie> movies;
   final bool allowSelection;
 
-  const VerticalMovieGrid({
+  final tmdbService = TMDBService();
+
+   VerticalMovieGrid({
     super.key,
     required this.movies,
     this.allowSelection = false,
@@ -35,18 +40,24 @@ class VerticalMovieGrid extends StatelessWidget {
         final poster = movie.posterPath;
 
         return GestureDetector(
-          onTap: () {
+          onTap: () async {
+            final fullMovie = await tmdbService.fetchMovieById(movie.id);
+            if (fullMovie == null) return;
+            if (context.mounted) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => MovieSheet(movie: fullMovie),
+              );
+            }
           },
           child: SizedBox(
             width: 30,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: poster != null
-                  ? Image.network(
-                "https://image.tmdb.org/t/p/w500$poster",
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
-              )
+                  ? CachedPosterImage.fromMovie(movie)
                   : _buildPlaceholder(context),
             ),
           ),
