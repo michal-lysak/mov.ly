@@ -120,7 +120,7 @@ class _MovieSheetState extends State<MovieSheet> {
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               child: Container(
-                color: Colors.black.withOpacity(0.4),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
               ),
             ),
             // Main content
@@ -129,7 +129,7 @@ class _MovieSheetState extends State<MovieSheet> {
                 borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(25)),
                 border: Border.all(
-                  color: Colors.grey.shade300.withOpacity(0.08),
+                  color: Theme.of(context).colorScheme.surface.withOpacity(0.08),
                   width: 1,
                 ),
               ),
