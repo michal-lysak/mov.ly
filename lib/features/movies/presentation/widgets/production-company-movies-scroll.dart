@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:iconify_flutter/iconify_flutter.dart';
-import 'package:iconify_flutter/icons/majesticons.dart';
+import 'package:movly/features/movies/presentation/widgets/vertical_movies_grid.dart';
+
+// Imports
+import '../../data/models/movie.dart';
 
 class CompanyMoviesSection extends StatefulWidget {
   final int movieId;
@@ -20,7 +22,7 @@ class CompanyMoviesSection extends StatefulWidget {
 }
 
 class _CompanyMoviesSectionState extends State<CompanyMoviesSection> {
-  List<dynamic> _companyMovies = [];
+  List<Movie> _companyMovies = [];
   bool _loading = true;
 
   @override
@@ -31,25 +33,40 @@ class _CompanyMoviesSectionState extends State<CompanyMoviesSection> {
 
   Future<void> _loadCompanyMovies() async {
     if (widget.productionCompanies.isEmpty) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
       return;
     }
 
-    final companyId = widget.productionCompanies.first['id'];
-    final apiKey = dotenv.env['TMDB_API_KEY'];
-    final url =
-        "https://api.themoviedb.org/3/discover/movie?api_key=$apiKey&with_companies=$companyId";
+    try {
+      final companyId = widget.productionCompanies.first['id'];
+      final apiKey = dotenv.env['TMDB_API_KEY'];
+      final url =
+          "https://api.themoviedb.org/3/discover/movie?api_key=$apiKey&with_companies=$companyId";
 
-    final res = await http.get(Uri.parse(url));
+      final res = await http.get(Uri.parse(url));
 
-    if (res.statusCode == 200) {
-      final jsonData = json.decode(res.body);
-      setState(() {
-        _companyMovies = jsonData["results"];
-        _loading = false;
-      });
-    } else {
-      setState(() => _loading = false);
+      if (res.statusCode == 200) {
+        final jsonData = json.decode(res.body);
+        final results = jsonData["results"] as List;
+
+        // Convert raw JSON to Movie objects
+        final List<Movie> mappedMovies = results
+            .map((data) => Movie.fromJson(data))
+            .where((m) => m.id != widget.movieId) // Optional: remove current movie
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            _companyMovies = mappedMovies;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      debugPrint("Error loading company movies: $e");
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -66,62 +83,8 @@ class _CompanyMoviesSectionState extends State<CompanyMoviesSection> {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-        ),
-
-        GridView.builder(
-            padding: const EdgeInsets.all(17),
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate:
-            const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.7,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: _companyMovies.length,
-            itemBuilder: (context, index) {
-              final movie = _companyMovies[index];
-              final poster = movie["poster_path"];
-
-              return GestureDetector(
-                onTap: () {
-                  // Your existing navigation to movie detail goes here
-                  // Example:
-                  // Navigator.push(context, MaterialPageRoute(
-                  //   builder: (_) => MovieDetailPage(movieId: movie["id"]),
-                  // ));
-                },
-                child: Container(
-                  width: 30,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: poster != null
-                        ? Image.network(
-                      "https://image.tmdb.org/t/p/w500$poster",
-                      fit: BoxFit.cover,
-                    )
-                        : Container(
-                      color: Colors.grey.shade800,
-                      child: Center(
-                        child: Iconify(
-                          Majesticons.image_off,
-                          size: 32,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-        ),
-      ],
+    return VerticalMovieGrid(
+      movies: _companyMovies,
     );
   }
 }

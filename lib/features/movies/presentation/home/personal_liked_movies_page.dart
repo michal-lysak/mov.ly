@@ -10,12 +10,10 @@ import '../widgets/movie_sheet.dart';
 
 class PersonalLikedMovies extends StatefulWidget {
   final String userId;
-  // ⚠️ Removed final VoidCallback onGoBack;
 
   const PersonalLikedMovies({
     super.key,
     required this.userId,
-    // ⚠️ Removed required this.onGoBack,
   });
 
   @override
