@@ -37,61 +37,62 @@ class _SocialTabState extends State<SocialTab> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 35),
-            child: Row(
-              children: [
-                Text(
-                  'Social',
-                  style: GoogleFonts.afacad(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SearchingBar(controller: _controller, onChanged: _onChanged),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _results.isEmpty
-                ? const Center(child: Text("No users found"))
-                : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _results.length,
-              itemBuilder: (context, index) {
-                final user = _results[index];
-                return GestureDetector(
-                  onTap: () {
-                    widget.onUserTap(user['username']);
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary,
-                      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
+        child: Column(
+          children: [
+            SizedBox(height: 40),
+
+            Row(
+                children: [
+                  Text(
+                    'Social',
+                    style: GoogleFonts.afacad(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: Text(
-                      user['username'] ?? "unknown",
-                      style: GoogleFonts.afacad(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
+
+            SizedBox(height: 24),
+            SearchingBar(controller: _controller, onChanged: _onChanged),
+            const SizedBox(height: 10),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _results.isEmpty
+                  ? const Center(child: Text("No users found"))
+                  : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: _results.length,
+                itemBuilder: (context, index) {
+                  final user = _results[index];
+                  return GestureDetector(
+                    onTap: () {
+                      widget.onUserTap(user['username']);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        user['username'] ?? "unknown",
+                        style: GoogleFonts.afacad(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
