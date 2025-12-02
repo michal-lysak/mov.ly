@@ -5,6 +5,7 @@ import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import '../widgets/movie_sheet.dart';
 import '../widgets/searching_bar.dart';
+import 'package:movly/features/movies/presentation/widgets/h-categories.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -79,13 +80,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     ? const Center(child: CircularProgressIndicator())
                     : searchResults.isEmpty
                     ? Center(
-                  child: Text(
-                    "Start typing to search movies...",
-                    style: GoogleFonts.afacad(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  child: Column(
+                    children: const [
+                      HorizontalScrolling_Categories(),
+                    ],
+
+
+                  )
                 )
                     : GridView.builder(
                   padding: const EdgeInsets.all(4),
