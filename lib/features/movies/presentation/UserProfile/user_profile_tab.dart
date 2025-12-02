@@ -79,6 +79,10 @@ class _UserProfileTabState extends State<UserProfileTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: widget.onBack,
+        ),
         title: Text(_profile?['username'] ?? "Profile"),
       ),
       body: SafeArea(
