@@ -4,12 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import 'package:movly/features/movies/data/cache/backdrop_cache.dart';
 import 'package:movly/features/movies/presentation/widgets/production-company-movies-scroll.dart';
-//import '../../../favorites/data/firestore_cloud/personal_favorites.dart';
 import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/ri.dart';
 import 'package:iconify_flutter/icons/majesticons.dart';
+import 'dart:ui';
 
 class MovieSheet extends StatefulWidget {
   final Movie movie;
@@ -24,7 +24,6 @@ class _MovieSheetState extends State<MovieSheet> {
   final FavoriteService favoriteService = FavoriteService();
 
   late PageController _pageController;
-
   List<String> _backdropPaths = [];
   bool _isLoading = true;
   bool _isFavorite = false;
@@ -46,7 +45,6 @@ class _MovieSheetState extends State<MovieSheet> {
       _isFavorite = fav;
     });
   }
-
 
   Future<void> _toggleFavorite(int movieId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -101,8 +99,6 @@ class _MovieSheetState extends State<MovieSheet> {
     }
   }
 
-
-
   @override
   void dispose() {
     _pageController.dispose();
@@ -116,181 +112,182 @@ class _MovieSheetState extends State<MovieSheet> {
       minChildSize: 0.4,
       maxChildSize: 0.9,
       expand: false,
-      builder: (_, controller) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-        ),
-        child: SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.only(bottom: 40),
-          child: Column(
-            crossAxisAlignment: .start,
-            children: [
-              const SizedBox(height: 20),
-
-              SizedBox(
-                height: 200,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _backdropPaths.length,
-                  physics: const BouncingScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    return _buildCarouselItem(index);
-                  },
+      builder: (_, controller) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+        child: Stack(
+          children: [
+            // Glassy background
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                color: Colors.black.withOpacity(0.4),
+              ),
+            ),
+            // Main content
+            Container(
+              decoration: BoxDecoration(
+                borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(25)),
+                border: Border.all(
+                  color: Colors.grey.shade300.withOpacity(0.08),
+                  width: 1,
                 ),
               ),
-
-              const SizedBox(height: 15),
-
-              Center(
-                child: Text(
-                  widget.movie.title,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.bebasNeue(
-                    fontSize: 32,
-                    height: 0.9,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 15),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: widget.movie.categories.take(3).map((cat) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: SizedBox(
-                      width: 80,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.grey.shade300.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        child: Text(
-                          cat,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.afacad(
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 15),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () => _toggleFavorite(widget.movie.id),
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-
-                      child: Iconify(
-                        _isFavorite ? Ri.heart_fill : Ri.heart_line,
-                        size: 32,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Iconify(
-                          Majesticons.bookmark_line,
-                          size: 32,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-
-                    ),
-                  )
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SingleChildScrollView(
+                controller: controller,
+                padding: const EdgeInsets.only(bottom: 40),
                 child: Column(
-                  crossAxisAlignment: .start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Overview',
-                      textAlign: .start,
-                      style: GoogleFonts.afacad(
-                        fontSize: 32,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 200,
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: _backdropPaths.length,
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          return _buildCarouselItem(index);
+                        },
                       ),
                     ),
-                    ExpandableText(
-                      text: widget.movie.overview,
-                      maxLines: 2, // optional, used in widget if you want
+                    const SizedBox(height: 15),
+                    Center(
+                      child: Text(
+                        widget.movie.title,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.bebasNeue(
+                          fontSize: 32,
+                          height: 0.9,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: widget.movie.categories.take(3).map((cat) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: SizedBox(
+                            width: 80,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.grey.shade300.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              child: Text(
+                                cat,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.afacad(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () => _toggleFavorite(widget.movie.id),
+                          child: SizedBox(
+                            width: 30,
+                            height: 30,
+                            child: Iconify(
+                              _isFavorite ? Ri.heart_fill : Ri.heart_line,
+                              size: 32,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          height: 50,
+                          width: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Iconify(
+                              Majesticons.bookmark_line,
+                              size: 32,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Overview',
+                            style: GoogleFonts.afacad(
+                              fontSize: 32,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          ExpandableText(
+                            text: widget.movie.overview,
+                            maxLines: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Text(
+                        "More from production",
+                        style: GoogleFonts.afacad(
+                          fontSize: 24,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    CompanyMoviesSection(
+                      movieId: widget.movie.id,
+                      productionCompanies: widget.movie.productionCompanies,
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 20),
-
-              Center(
-                child: Text(
-                  "More from production",
-                  style: GoogleFonts.afacad(
-                    fontSize: 24,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              CompanyMoviesSection(
-                movieId: widget.movie.id,
-                productionCompanies: widget.movie.productionCompanies,
-              ),
-
-            ],
-          ),
+            ),
+          ],
         ),
-      ),);
+      ),
+    );
   }
 
   Widget _buildCarouselItem(int index) {
-    // FIX 2: Get the specific backdrop path from the list
     final backdropPath = _backdropPaths[index];
 
     return AnimatedBuilder(
       animation: _pageController,
       builder: (context, child) {
         double scale = 0.8;
-
         if (_pageController.position.haveDimensions) {
           double page = _pageController.page ?? 0;
           double value = (page - index).abs();
           scale = (1 - (value * 0.15)).clamp(0.85, 1.0);
         }
-
         return Transform.scale(
           scale: scale,
           child: child,
@@ -329,7 +326,6 @@ class _ExpandableTextState extends State<ExpandableText> {
 
   @override
   Widget build(BuildContext context) {
-    // check if the text is short enough to not need "More"
     final needTruncate = widget.text.length > 120;
 
     return GestureDetector(
