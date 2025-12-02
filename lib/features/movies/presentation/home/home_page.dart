@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -84,52 +86,62 @@ class _HomePageState extends State<HomePage>
         if (!didPop) {
           final shouldPop = await _onWillPop();
           if (shouldPop) {
-            Navigator.of(context).pop();
+            if (context.mounted) Navigator.of(context).pop();
           }
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Theme
+            .of(context)
+            .colorScheme
+            .surface,
+        extendBody: true,
         body: IndexedStack(
           index: index,
           children: pages,
         ),
-        bottomNavigationBar: Container(
-          width: double.infinity,
-          height: 70,
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
+
+        bottomNavigationBar: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 70.0),
+            child: Container(
+              width: double.infinity,
+              height: 70,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.08),
+                    width: 0.5,
+                  ),
+                ),
               ),
-            ],
-          ),
-          child: SafeArea(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                NavIcon(
-                  iconLine: 'lib/assets/icons/home-line.svg',
-                  iconSolid: 'lib/assets/icons/home.svg',
-                  selected: index == 0,
-                  onTap: () => setState(() => index = 0),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    NavIcon(
+                      iconLine: 'lib/assets/icons/home-line.svg',
+                      iconSolid: 'lib/assets/icons/home.svg',
+                      selected: index == 0,
+                      onTap: () => setState(() => index = 0),
+                    ),
+                    NavIcon(
+                      iconLine: 'lib/assets/icons/compass-2-line.svg',
+                      iconSolid: 'lib/assets/icons/compass-2.svg',
+                      selected: index == 1,
+                      onTap: () => setState(() => index = 1),
+                    ),
+                    NavIcon(
+                      iconLine: 'lib/assets/icons/users-line.svg',
+                      iconSolid: 'lib/assets/icons/users.svg',
+                      selected: index == 2,
+                      onTap: () => setState(() => index = 2),
+                    ),
+                  ],
                 ),
-                NavIcon(
-                  iconLine: 'lib/assets/icons/compass-2-line.svg',
-                  iconSolid: 'lib/assets/icons/compass-2.svg',
-                  selected: index == 1,
-                  onTap: () => setState(() => index = 1),
-                ),
-                NavIcon(
-                  iconLine: 'lib/assets/icons/users-line.svg',
-                  iconSolid: 'lib/assets/icons/users.svg',
-                  selected: index == 2,
-                  onTap: () => setState(() => index = 2),
-                ),
-              ],
+              ),
             ),
           ),
         ),
