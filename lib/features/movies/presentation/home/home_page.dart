@@ -108,10 +108,10 @@ class _HomePageState extends State<HomePage>
               width: double.infinity,
               height: 70,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
                 border: Border(
                   top: BorderSide(
-                    color: Theme.of(context).colorScheme.surface.withOpacity(0.08),
+                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.08),
                     width: 0.5,
                   ),
                 ),
