@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
-import 'package:movly/features/movies/data/cache/poster_cache.dart';
-import '../widgets/movie_sheet.dart';
 import '../widgets/searching_bar.dart';
 import 'package:movly/features/movies/presentation/widgets/h-categories.dart';
+import '../widgets/vertical_movies_grid.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -14,14 +13,45 @@ class DiscoverPage extends StatefulWidget {
   State<DiscoverPage> createState() => _DiscoverPageState();
 }
 
-
 class _DiscoverPageState extends State<DiscoverPage> {
   final TextEditingController searchController = TextEditingController();
   final tmdbService = TMDBService();
 
   List<Movie> searchResults = [];
-  bool _isSearching = false;
+  List<Movie> categoryMovies = [];
 
+  // FIXED STATE MANAGEMENT
+  bool isSearchMode = false;
+  bool isLoadingSearch = false;
+  bool isLoadingCategory = false;
+
+  final Map<String, int> genreIds = {
+    "Action": 28,
+    "Adventure": 12,
+    "Animation": 16,
+    "Comedy": 35,
+    "Crime": 80,
+    "Documentary": 99,
+    "Drama": 18,
+    "Family": 10751,
+    "Fantasy": 14,
+    "History": 36,
+    "Horror": 27,
+    "Music": 10402,
+    "Mystery": 9648,
+    "Romance": 10749,
+    "Sci-Fi": 878,
+    "TV Movie": 10770,
+    "Thriller": 53,
+    "War": 10752,
+    "Western": 37,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategoryMovies(null);
+  }
 
   @override
   void dispose() {
@@ -29,36 +59,76 @@ class _DiscoverPageState extends State<DiscoverPage> {
     super.dispose();
   }
 
-  void _onSearchChanged(String value) async {
-    if (value.trim().isEmpty) {
-      setState(() {
-        searchResults = [];
-        _isSearching = false;
-      });
-      return;
+  // -----------------------
+  // CATEGORY FETCHING
+  // -----------------------
+  Future<void> _fetchCategoryMovies(String? category) async {
+    if (isSearchMode) return;
+
+    setState(() => isLoadingCategory = true);
+
+    List<Movie> results;
+
+    if (category == null) {
+      results = await tmdbService.fetchPopularMovies();
+    } else {
+      final id = genreIds[category];
+      results = id != null ? await tmdbService.fetchMoviesByGenre(id) : [];
     }
 
-    setState(() => _isSearching = true);
-
-    final results = await tmdbService.searchMovies(value);
+    if (!mounted) return;
 
     setState(() {
-      searchResults = results;
-      _isSearching = false;
+      categoryMovies = results;
+      isLoadingCategory = false;
     });
   }
 
+  // -----------------------
+  // SEARCH HANDLING
+  // -----------------------
+  void _onSearchChanged(String value) async {
+    final trimmed = value.trim();
+
+    if (trimmed.isEmpty) {
+      setState(() {
+        isSearchMode = false;
+        searchResults = [];
+      });
+
+      _fetchCategoryMovies(null);
+      return;
+    }
+
+    setState(() {
+      isSearchMode = true;
+      isLoadingSearch = true;
+    });
+
+    final results = await tmdbService.searchMovies(trimmed);
+
+    if (!mounted) return;
+
+    setState(() {
+      searchResults = results;
+      isLoadingSearch = false;
+    });
+  }
+
+  // -----------------------
+  // BUILD UI
+  // -----------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
+          padding: const EdgeInsets.symmetric(horizontal: 15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               Text(
                 'Discover',
                 style: GoogleFonts.afacad(
@@ -66,8 +136,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+
               const SizedBox(height: 24),
 
+              // Search Bar
               SearchingBar(
                 controller: searchController,
                 onChanged: _onSearchChanged,
@@ -75,54 +147,67 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
               const SizedBox(height: 20),
 
-              Expanded(
-                child: _isSearching
-                    ? const Center(child: CircularProgressIndicator())
-                    : searchResults.isEmpty
-                    ? Center(
-                  child: Column(
-                    children: const [
-                      HorizontalScrolling_Categories(),
-                    ],
-
-
-                  )
-                )
-                    : GridView.builder(
-                  padding: const EdgeInsets.all(4),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 0.65,
-                  ),
-                  itemCount: searchResults.length,
-                  itemBuilder: (context, index) {
-                    final movie = searchResults[index];
-                    return GestureDetector(
-                      onTap: () async {
-                        final fullMovie = await tmdbService.fetchMovieById(movie.id);
-
-                        if (fullMovie == null) return;
-
-                        if (context.mounted) {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => MovieSheet(movie: fullMovie),
-                        );
-                      }
-                      },
-                      child: CachedPosterImage.fromMovie(movie),
-                    );
-                  },
+              // Categories only visible when not searching
+              if (!isSearchMode)
+                HorizontalScrolling_Categories(
+                  onCategoryChanged: _fetchCategoryMovies,
                 ),
-              )
 
+              if (!isSearchMode)
+                const SizedBox(height: 10),
+
+              // Main content area
+              Expanded(
+                child: isSearchMode
+                    ? _buildSearchResults()
+                    : _buildCategoryView(),
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // -----------------------
+  // SEARCH RESULTS VIEW
+  // -----------------------
+  Widget _buildSearchResults() {
+    if (isLoadingSearch) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (searchResults.isEmpty) {
+      return Center(
+        child: Text(
+          "No movies found",
+          style: GoogleFonts.afacad(fontSize: 18),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: VerticalMovieGrid(movies: searchResults),
+    );
+  }
+
+  // -----------------------
+  // CATEGORY VIEW
+  // -----------------------
+  Widget _buildCategoryView() {
+    return RefreshIndicator(
+      onRefresh: () async => _fetchCategoryMovies(null),
+      child: isLoadingCategory
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+        padding: const EdgeInsets.only(top: 10),
+        children: [
+          VerticalMovieGrid(
+            movies: categoryMovies,
+            allowSelection: true,
+          ),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
