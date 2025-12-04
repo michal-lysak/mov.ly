@@ -20,74 +20,109 @@ class _HorizontalScrolling_CategoriesState extends State<HorizontalScrolling_Cat
     "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery",
     "Romance", "Sci-Fi", "TV Movie", "Thriller", "War", "Western"];
   late List<String> _displayCategories;
+  final _listKey = GlobalKey<AnimatedListState>();
+  final _scrollController = ScrollController();
   String? _selectedCategory;
 
   @override
   void initState() {
     super.initState();
-    _displayCategories = List.from(_initialCategories);
+    _displayCategories = List.from(_initialCategories)..sort();
   }
 
   void _onCategoryTapped(String category) {
-    setState(() {
-      if (_selectedCategory == category) {
-        // Deselect
-        _selectedCategory = null;
-        _displayCategories = List.from(_initialCategories)..sort();
-        // Notify parent: null means "show default/trending"
-        widget.onCategoryChanged(null);
-      } else {
-        // Select
-        _selectedCategory = category;
-        _displayCategories = List.from(_initialCategories);
-        _displayCategories.remove(category);
-        _displayCategories.insert(0, category);
-        // Notify parent
-        widget.onCategoryChanged(category);
-      }
-    });
+    if (_selectedCategory == category) {
+      // --- DESELECT ---
+      final int oldIndex = _displayCategories.indexOf(category);
+      final removedItem = _displayCategories.removeAt(oldIndex);
+      _listKey.currentState?.removeItem(
+        oldIndex,
+            (context, animation) => _buildCategoryItem(removedItem, false, animation),
+      );
+
+      _displayCategories = List.from(_initialCategories)..sort();
+      final int newIndex = _displayCategories.indexOf(removedItem);
+      _listKey.currentState?.insertItem(newIndex);
+
+      setState(() => _selectedCategory = null);
+      widget.onCategoryChanged(null);
+
+    } else {
+      // --- SELECT ---
+      final int oldIndex = _displayCategories.indexOf(category);
+      final removedItem = _displayCategories.removeAt(oldIndex);
+      _listKey.currentState?.removeItem(
+        oldIndex,
+            (context, animation) => _buildCategoryItem(removedItem, false, animation),
+      );
+
+      _displayCategories.insert(0, removedItem);
+      _listKey.currentState?.insertItem(0);
+
+      setState(() => _selectedCategory = category);
+      widget.onCategoryChanged(category);
+
+      // Scroll to the beginning
+      _scrollController.animateTo(0.0, duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 35, // Slightly increased to fit borders nicely
-      child: ListView.builder(
+      child: AnimatedList(
+        key: _listKey,
+        controller: _scrollController,
+        padding: const EdgeInsets.only(left: 15, right: 9), // Add padding to the start of the list
         scrollDirection: Axis.horizontal,
-        itemCount: _displayCategories.length,
-        itemBuilder: (context, index) {
+        initialItemCount: _displayCategories.length,
+        itemBuilder: (context, index, animation) {
           final category = _displayCategories[index];
           final isSelected = category == _selectedCategory;
-          return Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: GestureDetector(
-              onTap: () => _onCategoryTapped(category),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected ? Colors.white : Colors.grey.shade300.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Center(
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 300),
-                    style: GoogleFonts.afacad(
-                      fontSize: 16,
-                      color: isSelected ? Colors.black : Colors.white,
-                    ),
-                    child: Text(category),
-                  ),
-                ),
-              ),
-            ),
+          return _buildCategoryItem(
+            category,
+            isSelected,
+            animation,
+            onTap: () => _onCategoryTapped(category),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(String category, bool isSelected, Animation<double> animation, {VoidCallback? onTap}) {
+    return SizeTransition(
+      sizeFactor: animation,
+      axis: Axis.horizontal,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Center(
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                style: GoogleFonts.afacad(
+                  fontSize: 16,
+                  color: isSelected ? Colors.black : Colors.white,
+                ),
+                child: Text(category, style: const TextStyle(fontWeight: FontWeight.w500)),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
