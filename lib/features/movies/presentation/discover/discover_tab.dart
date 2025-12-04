@@ -123,11 +123,14 @@ class _DiscoverPageState extends State<DiscoverPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               const SizedBox(height: 40),
               Text(
                 'Discover',
@@ -136,7 +139,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-
               const SizedBox(height: 24),
 
               // Search Bar
@@ -144,26 +146,28 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 controller: searchController,
                 onChanged: _onSearchChanged,
               ),
-
-              const SizedBox(height: 20),
-
-              // Categories only visible when not searching
-              if (!isSearchMode)
-                HorizontalScrolling_Categories(
-                  onCategoryChanged: _fetchCategoryMovies,
-                ),
-
-              if (!isSearchMode)
-                const SizedBox(height: 10),
-
-              // Main content area
-              Expanded(
-                child: isSearchMode
-                    ? _buildSearchResults()
-                    : _buildCategoryView(),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+
+            // Categories only visible when not searching
+            if (!isSearchMode)
+              HorizontalScrolling_Categories(
+                onCategoryChanged: _fetchCategoryMovies,
+              ),
+
+            if (!isSearchMode) const SizedBox(height: 10),
+
+            // Main content area
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child:
+                    isSearchMode ? _buildSearchResults() : _buildCategoryView(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -200,15 +204,15 @@ class _DiscoverPageState extends State<DiscoverPage> {
       child: isLoadingCategory
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-        padding: const EdgeInsets.only(top: 10),
-        children: [
-          VerticalMovieGrid(
-            movies: categoryMovies,
-            allowSelection: true,
-          ),
-          const SizedBox(height: 40),
-        ],
-      ),
+              padding: const EdgeInsets.only(top: 10),
+              children: [
+                VerticalMovieGrid(
+                  movies: categoryMovies,
+                  allowSelection: true,
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
     );
   }
 }
