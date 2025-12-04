@@ -8,6 +8,26 @@ class TMDBService {
   final String? _apiKey = dotenv.env['TMDB_API_KEY'];
 
 
+  Future<List<Movie>> fetchMoviesByGenre(int genreId) async {
+    try {
+      // Standard TMDB Discover endpoint
+      final url = Uri.parse(
+          '$_baseUrl/discover/movie?api_key=$_apiKey&with_genres=$genreId&sort_by=popularity.desc');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List results = data['results'];
+        return results.map((e) => Movie.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching genre movies: $e');
+      return [];
+    }
+  }
+
+
   Future<List<Movie>> fetchPopularMovies({int page = 1}) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/movie/popular?api_key=$_apiKey&page=$page'),

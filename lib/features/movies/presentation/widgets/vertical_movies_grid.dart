@@ -25,7 +25,6 @@ class VerticalMovieGrid extends StatelessWidget {
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(17),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -55,7 +54,7 @@ class VerticalMovieGrid extends StatelessWidget {
           child: SizedBox(
             width: 30,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: poster != null
                   ? CachedPosterImage.fromMovie(movie)
                   : _buildPlaceholder(context),

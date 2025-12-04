@@ -116,20 +116,19 @@ class _MovieSheetState extends State<MovieSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         child: Stack(
           children: [
-            // Glassy background
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               child: Container(
                 color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
               ),
             ),
-            // Main content
             Container(
               decoration: BoxDecoration(
                 borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(25)),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.08),
+                  color:
+                  Theme.of(context).colorScheme.surface.withOpacity(0.08),
                   width: 1,
                 ),
               ),
@@ -140,6 +139,8 @@ class _MovieSheetState extends State<MovieSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
+
+                    // BACKDROP CAROUSEL
                     SizedBox(
                       height: 200,
                       child: PageView.builder(
@@ -151,18 +152,38 @@ class _MovieSheetState extends State<MovieSheet> {
                         },
                       ),
                     ),
+
                     const SizedBox(height: 15),
+
+                    // TITLE
                     Center(
-                      child: Text(
-                        widget.movie.title,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.bebasNeue(
-                          fontSize: 32,
-                          height: 0.9,
-                        ),
+                      child: Column(
+                        children: [
+                          Text(
+                            widget.movie.title,
+                            textAlign: .center,
+                            style: GoogleFonts.bebasNeue(
+                              fontSize: 32,
+                              height: 0.9,
+                            ),
+                          ),
+
+                          Text(
+                            widget.movie.releaseDate.isNotEmpty
+                                ? widget.movie.releaseDate.split('-').first
+                                : "N/A",
+                            style: GoogleFonts.afacad(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+
                     const SizedBox(height: 15),
+
+                    // CATEGORIES
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: widget.movie.categories.take(3).map((cat) {
@@ -174,7 +195,8 @@ class _MovieSheetState extends State<MovieSheet> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: Colors.grey.shade300.withOpacity(0.3),
+                                  color:
+                                  Colors.grey.shade300.withOpacity(0.3),
                                   width: 1,
                                 ),
                               ),
@@ -195,7 +217,10 @@ class _MovieSheetState extends State<MovieSheet> {
                         );
                       }).toList(),
                     ),
+
                     const SizedBox(height: 15),
+
+                    // FAVORITE & BOOKMARK
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -205,7 +230,9 @@ class _MovieSheetState extends State<MovieSheet> {
                             width: 30,
                             height: 30,
                             child: Iconify(
-                              _isFavorite ? Ri.heart_fill : Ri.heart_line,
+                              _isFavorite
+                                  ? Ri.heart_fill
+                                  : Ri.heart_line,
                               size: 32,
                               color: Colors.white,
                             ),
@@ -217,20 +244,25 @@ class _MovieSheetState extends State<MovieSheet> {
                           width: 50,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            color: Theme.of(context).colorScheme.secondary,
+                            color:
+                            Theme.of(context).colorScheme.secondary,
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Iconify(
                               Majesticons.bookmark_line,
                               size: 32,
-                              color: Theme.of(context).colorScheme.primary,
+                              color:
+                              Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         )
                       ],
                     ),
+
                     const SizedBox(height: 10),
+
+                    // OVERVIEW
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
@@ -251,7 +283,10 @@ class _MovieSheetState extends State<MovieSheet> {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 20),
+
+                    // MORE MOVIES FROM THE COMPANY
                     Center(
                       child: Text(
                         "More from production",
@@ -262,9 +297,13 @@ class _MovieSheetState extends State<MovieSheet> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 10),
+
                     CompanyMoviesSection(
                       movieId: widget.movie.id,
-                      productionCompanies: widget.movie.productionCompanies,
+                      productionCompanies:
+                      widget.movie.productionCompanies,
                     ),
                   ],
                 ),
@@ -321,36 +360,47 @@ class ExpandableText extends StatefulWidget {
   State<ExpandableText> createState() => _ExpandableTextState();
 }
 
-class _ExpandableTextState extends State<ExpandableText> {
+class _ExpandableTextState extends State<ExpandableText>
+    with SingleTickerProviderStateMixin {
   bool expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final needTruncate = widget.text.length > 120;
+    final fullText = widget.text;
+    final shortText = widget.text.substring(0, 120) + "...";
 
     return GestureDetector(
       onTap: () => setState(() => expanded = !expanded),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: expanded || !needTruncate
-                  ? widget.text
-                  : widget.text.substring(0, 120) + "...",
-              style: GoogleFonts.afacad(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            if (needTruncate)
-              TextSpan(
-                text: expanded ? "  Less" : "  More",
-                style: GoogleFonts.afacad(
-                  fontSize: 16,
-                  color: Colors.blue,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOut,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          child: RichText(
+            key: ValueKey(expanded),
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: expanded || !needTruncate ? fullText : shortText,
+                  style: GoogleFonts.afacad(
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-          ],
+                if (needTruncate)
+                  TextSpan(
+                    text: expanded ? "  Less" : "  More",
+                    style: GoogleFonts.afacad(
+                      fontSize: 16,
+                      color: Colors.blue,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
