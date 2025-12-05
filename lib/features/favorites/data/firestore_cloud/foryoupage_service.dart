@@ -83,5 +83,20 @@ class ForYouPageService {
     }
   }
 
-  void dispose() {}
+  Future<List<String>> getForYouListOnce(String uid) async {
+    final snap = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('foryoupagelist')
+        .orderBy('timestamp', descending: true)
+        .get();
+
+    return snap.docs.map((d) => d['id'].toString()).toList();
+  }
+
+  void dispose() {
+  }
 }
+
+
+void dispose() {}
