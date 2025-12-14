@@ -115,4 +115,21 @@ class FavoriteService {
 
     return movies;
   }
+
+  Future<List<Movie>> fetchTopFavoriteMovies() async {
+    final querySnapshot = await _db
+        .collection('favoritemovies')
+        .orderBy('favoritesCount', descending: true)
+        .limit(20)
+        .get();
+
+    final movies = await Future.wait(querySnapshot.docs.map((doc) async {
+      final movieId = int.tryParse(doc.id); // doc ID is movieId
+      if (movieId == null) return null;
+      return _tmdb.fetchMovieById(movieId);
+    }));
+
+    // Filter out nulls (in case fetching fails)
+    return movies.whereType<Movie>().toList();
+  }
 }
