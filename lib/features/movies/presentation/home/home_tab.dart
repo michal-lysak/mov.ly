@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/ri.dart';
+import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_sheet.dart';
@@ -22,6 +23,7 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   final TMDBService _tmdbService = TMDBService();
+  final FavoriteService _favoriteService = FavoriteService();
   final PageController _pageController = PageController(viewportFraction: 0.8);
   final ForYouPageService _forYouService = ForYouPageService();
   final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
@@ -246,6 +248,12 @@ class _HomeTabState extends State<HomeTab> {
                 ),
 
               const SizedBox(height: 20),
+
+              MovieCarousel(
+                title: 'People love the most',
+                moviesFuture: _favoriteService.fetchTopFavoriteMovies(),
+              ),
+
 
               MovieCarousel(
                   title: 'Now in Cinemas',
