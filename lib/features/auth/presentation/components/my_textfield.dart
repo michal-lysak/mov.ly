@@ -21,19 +21,19 @@ class MyTextField extends StatelessWidget {
 
         // border when unselected
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.tertiary),
-          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.transparent),
+          borderRadius: BorderRadius.circular(10),
         ),
 
         // border when selected
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Theme.of(context).colorScheme.inversePrimary),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
 
         hintText: hintText,
         hintStyle: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
-        fillColor: Theme.of(context).colorScheme.secondary,
+        fillColor: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
         filled: true,
       ),
     );
