@@ -34,14 +34,16 @@ class FirebaseAuthRepo implements AuthRepo {
   @override
   Future<AppUser?> registerWithEmailPassword(String name, String email, String password) async {
     try {
-      UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-          email: email, password: password);
+      UserCredential userCredential =
+          await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
+
+      // Update the user's display name
+      await userCredential.user?.updateDisplayName(name);
 
       await _userService.createUser(
         userCredential.user!.uid,
         email: email,
         name: name,
-        // username will be null initially
       );
 
       return AppUser(
@@ -77,12 +79,13 @@ class FirebaseAuthRepo implements AuthRepo {
         await _userService.createUser(
           firebaseUser.uid,
           email: firebaseUser.email ?? '',
+          name: firebaseUser.displayName ?? '',
         );
         return AppUser(
           uid: firebaseUser.uid,
           email: firebaseUser.email ?? '',
           username: null,
-          name: null,
+          name: firebaseUser.displayName,
         );
       } else {
         final doc = await _userService.getUser(firebaseUser.uid);
