@@ -104,6 +104,7 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -164,12 +165,18 @@ class _SignupPageState extends State<SignupPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Already have an account? '),
+                      Text(
+                        'Already have an account? ',
+                        style: GoogleFonts.afacad(
+
+                        )),
                       GestureDetector(
                         onTap: widget.onLoginTap,
-                        child: const Text(
+                        child: Text(
                           'Login now',
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.afacad(
+                            color: Colors.blue, 
+                            fontWeight: .bold),
                         ),
                       )
                     ],
