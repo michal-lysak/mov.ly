@@ -134,7 +134,6 @@ class _MovieSheetState extends State<MovieSheet> {
               ),
               child: SingleChildScrollView(
                 controller: controller,
-                padding: const EdgeInsets.only(bottom: 40),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -300,10 +299,13 @@ class _MovieSheetState extends State<MovieSheet> {
 
                     const SizedBox(height: 10),
 
-                    CompanyMoviesSection(
-                      movieId: widget.movie.id,
-                      productionCompanies:
-                      widget.movie.productionCompanies,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      child: CompanyMoviesSection(
+                        movieId: widget.movie.id,
+                        productionCompanies:
+                        widget.movie.productionCompanies,
+                      ),
                     ),
                   ],
                 ),
