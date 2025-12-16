@@ -20,7 +20,7 @@ class AuthGate extends StatelessWidget {
         // User is logged in but hasn't set their initial username
         return '/username';
       }
-
+/*
       // 2. Check if the user has completed the main onboarding (e.g., liking titles, setting preferences)
       // This 'is_onboarded' flag must be set to true when the user finishes the /preHome screen.
       final bool isOnboarded = data.containsKey('is_onboarded') && data['is_onboarded'] == true;
@@ -29,6 +29,7 @@ class AuthGate extends StatelessWidget {
         // User has a username but needs to go through the /preHome flow
         return '/preHome';
       }
+*/
 
       // 3. User is fully setup and can access the main app
       return '/home';
