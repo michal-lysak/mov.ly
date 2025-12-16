@@ -251,23 +251,26 @@ class _HomeTabState extends State<HomeTab> {
 
               MovieCarousel(
                 title: 'People love the most',
+                sectionKey: 'top_favorites',
                 moviesFuture: _favoriteService.fetchTopFavoriteMovies(),
               ),
 
-
               MovieCarousel(
-                  title: 'Now in Cinemas',
-                  moviesFuture: _tmdbService.fetchNowPlayingMovies()
+                title: 'Now in Cinemas',
+                sectionKey: 'now_playing',
+                moviesFuture: _tmdbService.fetchNowPlayingMovies(),
               ),
 
               MovieCarousel(
-                title: "Popular now",
+                title: 'Popular now',
+                sectionKey: 'popular',
                 moviesFuture: _tmdbService.fetchPopularMovies(),
               ),
 
               MovieCarousel(
-                  title: 'Horror',
-                  moviesFuture: _tmdbService.fetchHorrorMovies()
+                title: 'Horror',
+                sectionKey: 'horror',
+                moviesFuture: _tmdbService.fetchHorrorMovies(),
               ),
             ],
           ),
