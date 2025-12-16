@@ -15,7 +15,7 @@ class MovieCarousel extends StatefulWidget {
     super.key,
     required this.title,
     required this.moviesFuture,
-    this.height = 200,
+    this.height = 175,
   });
 
   @override
@@ -65,6 +65,7 @@ class _MovieCarouselState extends State<MovieCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final double itemWidth = widget.height * 0.65;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -90,6 +91,7 @@ class _MovieCarouselState extends State<MovieCarousel> {
               final movie = _movies![index];
               return GestureDetector(
                 onTap: () async {
+                  width: itemWidth;
                   final fullMovie = await tmdbService.fetchMovieById(movie.id);
                   if (fullMovie == null) return;
                   if (context.mounted) {
