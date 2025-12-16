@@ -8,6 +8,8 @@ import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/ri.dart';
+import 'package:iconify_flutter/icons/bx.dart';
+import 'package:iconify_flutter/icons/bxs.dart';
 import 'package:iconify_flutter/icons/majesticons.dart';
 import 'dart:ui';
 
@@ -27,22 +29,27 @@ class _MovieSheetState extends State<MovieSheet> {
   List<String> _backdropPaths = [];
   bool _isLoading = true;
   bool _isFavorite = false;
+  bool _inWatchlist = false;
+
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.85);
     _loadBackdrops();
-    _loadFavoriteStatus();
+    _loadMovieStatus();
   }
 
-  void _loadFavoriteStatus() async {
+  void _loadMovieStatus() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
-    final fav = await favoriteService.isFavorite(userId, widget.movie.id);
+    final status = await favoriteService.getMovieListsStatus(userId, widget.movie.id);
+    if (!mounted) return;
+
     setState(() {
-      _isFavorite = fav;
+      _isFavorite = status['isFavorite'] ?? false;
+      _inWatchlist = status['inWatchlist'] ?? false;
     });
   }
 
@@ -51,24 +58,40 @@ class _MovieSheetState extends State<MovieSheet> {
     if (userId == null) return;
 
     try {
-      final alreadyFav = await favoriteService.isFavorite(userId, movieId);
-
-      if (alreadyFav) {
-        await favoriteService.unfavoriteMovie(userId, movieId);
-        setState(() {
-          _isFavorite = false;
-        });
+      if (_isFavorite) {
+        await favoriteService.removeFromList(userId, movieId, 'favorites');
+        setState(() => _isFavorite = false);
       } else {
-        await favoriteService.favoriteMovie(userId, movieId);
-        setState(() {
-          _isFavorite = true;
-        });
+        await favoriteService.addToList(userId, movieId, 'favorites');
+        setState(() => _isFavorite = true);
       }
     } catch (e) {
-      debugPrint('Error favoriting movie: $e');
+      debugPrint('Error updating favorites: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to favorite movie.')),
+          const SnackBar(content: Text('Failed to update favorites.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleWatchlist(int movieId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      if (_inWatchlist) {
+        await favoriteService.removeFromList(userId, movieId, 'watchlist');
+        setState(() => _inWatchlist = false);
+      } else {
+        await favoriteService.addToList(userId, movieId, 'watchlist');
+        setState(() => _inWatchlist = true);
+      }
+    } catch (e) {
+      debugPrint('Error updating watchlist: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update watchlist.')),
         );
       }
     }
@@ -238,21 +261,25 @@ class _MovieSheetState extends State<MovieSheet> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Container(
-                          height: 50,
-                          width: 50,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color:
-                            Theme.of(context).colorScheme.secondary,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Iconify(
-                              Majesticons.bookmark_line,
-                              size: 32,
+                        GestureDetector(
+                          onTap: () => _toggleWatchlist(widget.movie.id),
+                          child: Container(
+                            height: 50,
+                            width: 50,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
                               color:
-                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.secondary,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Iconify(
+                                _inWatchlist
+                                    ? Bxs.bookmark_alt_minus
+                                    : Bx.bookmark_alt_plus,
+                                color: Colors.white,
+                                size: 24,
+                              ),
                             ),
                           ),
                         )
