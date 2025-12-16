@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import '../../../auth/data/firestore_cloud/user_service.dart';
-import '../../../movies/data/models/movie.dart';
+import '../../data/models/movie.dart';
 import '../widgets/vertical_movies_grid.dart';
 /*
   NOTE:
