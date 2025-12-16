@@ -6,75 +6,79 @@ import '../../../movies/data/services/tmdb_service.dart';
 class FavoriteService {
   final _db = FirebaseFirestore.instance;
   final _tmdb = TMDBService();
+  // Constant for the list name
+  static const String _favoriteListName = 'favorites';
+  static const String _watchlistName = 'watchlist';
 
-  /// Check if movie is already in user's favorites
-  Future<bool> isFavorite(String userId, int movieId) async {
+  /// Add movie to the user's favorites list
+  Future<void> favoriteMovie(String userId, int movieId) async {
+    final userRef = _db.collection('favoritesperuser').doc(userId);
+    await userRef.set({
+      _favoriteListName: FieldValue.arrayUnion([
+        {'id': movieId, 'addedAt': DateTime.now().toIso8601String()}
+      ])
+    }, SetOptions(merge: true));
+
+    /// +1 to global
+    await _db.collection('favoritemovies').doc(movieId.toString()).set({
+      'favoritesCount': FieldValue.increment(1),
+      'lastUpdated': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Remove movie from the user's favorites list
+  Future<void> unfavoriteMovie(String userId, int movieId) async {
+    final userRef = _db.collection('favoritesperuser').doc(userId);
+    final snap = await userRef.get();
+    if (!snap.exists) return;
+
+    final list = List<Map>.from(snap.data()?[_favoriteListName] ?? []);
+    final updated = list.where((item) => item['id'] != movieId).toList();
+    await userRef.update({_favoriteListName: updated});
+
+    /// -1 to global
+    await _db.collection('favoritemovies').doc(movieId.toString()).set({
+      'favoritesCount': FieldValue.increment(-1),
+      'lastUpdated': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Check if a movie is in user's lists (favorites or watchlist)
+  Future<Map<String, bool>> getMovieListsStatus(String userId, int movieId) async {
     final userRef = _db.collection('favoritesperuser').doc(userId);
     final snap = await userRef.get();
 
-    if (!snap.exists) return false;
+    if (!snap.exists) return {'isFavorite': false, 'inWatchlist': false};
 
-    final favorites = List<Map>.from(snap.data()?['favorites'] ?? []);
+    final data = snap.data()!;
+    final favorites = List<Map>.from(data[_favoriteListName] ?? []);
+    final watchlist = List<Map>.from(data[_watchlistName] ?? []);
 
-    return favorites.any((item) => item['id'] == movieId);
+    return {
+      'isFavorite': favorites.any((item) => item['id'] == movieId),
+      'inWatchlist': watchlist.any((item) => item['id'] == movieId),
+    };
   }
 
-
-  /// Ensure movie exists globally with keywords and counter
-  Future<void> _ensureMovieExists(int movieId) async {
-    final ref = _db.collection('favoritemovies').doc(movieId.toString());
-    final snap = await ref.get();
-
-    if (!snap.exists || (snap.data()?['keywords'] == null)) {
-      final keywords = await _tmdb.fetchMovieKeywords(movieId);
-
-      await ref.set({
-        'keywords': keywords,
-        'lastUpdated': FieldValue.serverTimestamp(),
-        'favoritesCount': FieldValue.increment(0),
-      }, SetOptions(merge: true));
-    }
-  }
-
-  /// Favorite movie (global + user)
-  Future<void> favoriteMovie(String userId, int movieId) async {
-    await _ensureMovieExists(movieId);
-
-    // Increment global counter
-    await _db.collection('favoritemovies')
-        .doc(movieId.toString())
-        .update({'favoritesCount': FieldValue.increment(1)});
-
-    // Add movie to user's list (store only ID & timestamp)
+  /// Add movie to any list (keeping this for watchlist/future use)
+  Future<void> addToList(String userId, int movieId, String listName) async {
     final userRef = _db.collection('favoritesperuser').doc(userId);
-
     await userRef.set({
-      'isPublic': true,
-      'favorites': FieldValue.arrayUnion([
-        {
-          'id': movieId,
-          'favoritedAt': DateTime.now().toIso8601String(),
-        }
+      listName: FieldValue.arrayUnion([
+        {'id': movieId, 'addedAt': DateTime.now().toIso8601String()}
       ])
     }, SetOptions(merge: true));
   }
 
-  /// Unfavorite movie
-  Future<void> unfavoriteMovie(String userId, int movieId) async {
-    // Remove from user
+  /// Remove movie from any list (keeping this for watchlist/future use)
+  Future<void> removeFromList(String userId, int movieId, String listName) async {
     final userRef = _db.collection('favoritesperuser').doc(userId);
     final snap = await userRef.get();
+    if (!snap.exists) return;
 
-    if (snap.exists) {
-      final favorites = List<Map>.from(snap.data()?['favorites'] ?? []);
-      final updated = favorites.where((item) => item['id'] != movieId).toList();
-      await userRef.update({'favorites': updated});
-    }
-
-    // Decrement global counter
-    await _db.collection('favoritemovies')
-        .doc(movieId.toString())
-        .update({'favoritesCount': FieldValue.increment(-1)});
+    final list = List<Map>.from(snap.data()?[listName] ?? []);
+    final updated = list.where((item) => item['id'] != movieId).toList();
+    await userRef.update({listName: updated});
   }
 
   Future<List<Movie?>> fetchFavoriteMovies(String userId) async {
@@ -82,36 +86,15 @@ class FavoriteService {
     final userRef = _db.collection('favoritesperuser').doc(userId);
     final snap = await userRef.get();
 
-    if (!snap.exists || snap.data()?['favorites'] == null) return [];
+    if (!snap.exists || snap.data()?[_favoriteListName] == null) return [];
 
-    final favorites = List<Map<String, dynamic>>.from(snap.data()?['favorites']);
+    final favorites = List<Map<String, dynamic>>.from(snap.data()?[_favoriteListName]);
     final movieIds = favorites.map((f) => f['id'] as int).toList();
 
     // Fetch all movies in parallel for faster loading
     final movies = await Future.wait(
         movieIds.map((id) => _tmdb.fetchMovieById(id))
     );
-
-    Future<List<int>> getFavoritesOfUser(String userId) async {
-
-      final userRef = _db.collection('favoritesperuser').doc(userId);
-      final snap = await userRef.get();
-
-      if (!snap.exists || snap.data()?['favorites'] == null) {
-        return [];
-      }
-
-      final favorites = List<Map<String, dynamic>>.from(
-        snap.data()?['favorites'] ?? [],
-      );
-
-      return favorites.map((f) => f['id'] as int).toList();
-    }
-
-    Future<List<Movie?>> fetchFavoriteMoviesOfUser(String userId) {
-      return fetchFavoriteMovies(userId);
-    }
-
 
     return movies;
   }
