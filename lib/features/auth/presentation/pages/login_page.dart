@@ -163,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
-                mainAxisAlignment: .center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 40),
                   const Icon(
@@ -178,14 +178,14 @@ class _LoginPageState extends State<LoginPage> {
                       style: GoogleFonts.bebasNeue(
                           fontSize: 52
                       ),
-                textAlign: .center
+                textAlign: TextAlign.center
                   ),
                   Text(
                       "You need to sign in",
                       style: GoogleFonts.afacad(
                           fontSize: 20
                       ),
-                      textAlign: .center
+                      textAlign: TextAlign.center
                   ),
 
                   const SizedBox(height: 30),
@@ -209,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
                           obscureText: true,
                       ),
                       Row(
-                        mainAxisAlignment: .end,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           GestureDetector(
                             onTap: () => openForgotPassword(),
@@ -235,12 +235,12 @@ class _LoginPageState extends State<LoginPage> {
                             _errorMessage!,
                             style: const TextStyle(
                                 color: Colors.red),
-                            textAlign: .center),
+                            textAlign: TextAlign.center),
 
                       const SizedBox(height: 10),
 
                       Row(
-                        mainAxisAlignment: .center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                            Text(
                              'Not signed in? ',
@@ -253,7 +253,7 @@ class _LoginPageState extends State<LoginPage> {
                               'Register now',
                               style: GoogleFonts.afacad(
                                   color: Colors.blue,
-                                  fontWeight: .bold
+                                  fontWeight: FontWeight.bold
                               ),
                             ),
                           )

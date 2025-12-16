@@ -176,7 +176,7 @@ class _SignupPageState extends State<SignupPage> {
                           'Login now',
                           style: GoogleFonts.afacad(
                             color: Colors.blue, 
-                            fontWeight: .bold),
+                            fontWeight: FontWeight.bold),
                         ),
                       )
                     ],

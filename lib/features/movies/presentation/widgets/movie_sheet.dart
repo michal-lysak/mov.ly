@@ -183,7 +183,7 @@ class _MovieSheetState extends State<MovieSheet> {
                         children: [
                           Text(
                             widget.movie.title,
-                            textAlign: .center,
+                            textAlign: TextAlign.center,
                             style: GoogleFonts.bebasNeue(
                               fontSize: 32,
                               height: 0.9,
