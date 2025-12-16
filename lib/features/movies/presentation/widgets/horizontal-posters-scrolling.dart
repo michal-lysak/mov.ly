@@ -3,17 +3,21 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
+import '../../data/cache/movie_cache.dart';
 import '../../data/cache/poster_cache.dart';
+import '../../data/cache/sectionsCache/sections_cache.dart';
 import 'movie_sheet.dart';
 
 class MovieCarousel extends StatefulWidget {
   final String title;
+  final String sectionKey;
   final Future<List<Movie>> moviesFuture;
   final double height;
 
   const MovieCarousel({
     super.key,
     required this.title,
+    required this.sectionKey,
     required this.moviesFuture,
     this.height = 175,
   });
@@ -35,18 +39,44 @@ class _MovieCarouselState extends State<MovieCarousel> {
 
   Future<void> _loadMovies() async {
     try {
-      final movies = await widget.moviesFuture;
-      if (mounted) {
+      final cached = await SectionsCache.loadSection(widget.sectionKey);
+      List<Movie> cachedMovies = [];
+      if (cached != null) {
+        cachedMovies = await MovieCache.loadMoviesByIds(cached.movieIds);
+      }
+
+      if (cachedMovies.isNotEmpty && mounted) {
         setState(() {
-          _movies = movies;
+          _movies = cachedMovies;
           _isLoading = false;
         });
       }
+
+      final networkMovies = await widget.moviesFuture;
+      if (networkMovies.isNotEmpty && mounted) {
+        setState(() {
+          _movies = networkMovies;
+          _isLoading = false;
+        });
+
+        // Save to cache
+        for (final m in networkMovies) {
+          await MovieCache.saveMovie(m);
+        }
+        await SectionsCache.saveSection(
+          widget.sectionKey,
+          networkMovies.map((m) => m.id).toList(),
+        );
+      }
     } catch (e) {
       debugPrint("Error loading movies: $e");
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && (_movies == null || _movies!.isEmpty)) {
+        setState(() => _isLoading = false);
+      }
     }
   }
+
+
 
   Widget _buildShimmerPlaceholder() {
     return ClipRRect(
@@ -94,6 +124,7 @@ class _MovieCarouselState extends State<MovieCarousel> {
                   width: itemWidth;
                   final fullMovie = await tmdbService.fetchMovieById(movie.id);
                   if (fullMovie == null) return;
+                  await MovieCache.saveMovie(fullMovie); // save it
                   if (context.mounted) {
                     showModalBottomSheet(
                       context: context,
