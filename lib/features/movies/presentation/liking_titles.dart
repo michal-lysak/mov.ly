@@ -82,16 +82,25 @@ class _PreHomePageState extends State<PreHomePage> {
       _currentMovies.clear();
       _currentPage = 1;
       _hasMore = true;
-      _selectedMovieIds.clear();
+      // Keep _selectedMovieIds on refresh, but re-fetch to be safe
     });
     await _fetchMovies();
   }
 
   Future<void> _toggleFavorite(int movieId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null) {
+      // Show an error or prompt the user to log in
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to save favorites.')),
+        );
+      }
+      return;
+    }
 
     final bool wasSelected = _selectedMovieIds.contains(movieId);
+
     setState(() {
       if (wasSelected) {
         _selectedMovieIds.remove(movieId);
@@ -108,7 +117,7 @@ class _PreHomePageState extends State<PreHomePage> {
       }
     } catch (e) {
       debugPrint('Error favoriting movie: $e');
-      // If the network call fails, revert the local state change
+      // Revert the local state change if the network call fails
       if (mounted) {
         setState(() {
           if (wasSelected) {
@@ -282,6 +291,7 @@ class _PreHomePageState extends State<PreHomePage> {
           ),
 
 
+          // Continue Button
           Positioned(
             left: 0,
             right: 0,
@@ -289,17 +299,26 @@ class _PreHomePageState extends State<PreHomePage> {
             child: Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  // Using theme primary for contrast on surface background
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
+                  elevation: 5,
+                  padding: const EdgeInsets.symmetric(horizontal: 38, vertical: 16),
                 ),
-                onPressed: () {
+                onPressed: selectionCount > 0
+                    ? () {
                   Navigator.pushNamed(context, '/home');
-                },
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 38, vertical: 16),
-                  child: Text("Continue"),
+                }
+                    : null, // Disable if nothing is selected
+                child: Text(
+                  selectionCount > 0 ? "Continue" : "Select Favorites to Continue",
+                  style: GoogleFonts.afacad(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
