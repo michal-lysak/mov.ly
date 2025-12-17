@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:movly/features/movies/data/models/production_company.dart';
 import 'package:movly/features/movies/presentation/widgets/vertical_movies_grid.dart';
 
 // Imports
@@ -9,7 +10,7 @@ import '../../data/models/movie.dart';
 
 class CompanyMoviesSection extends StatefulWidget {
   final int movieId;
-  final List<dynamic> productionCompanies;
+  final List<ProductionCompany> productionCompanies;
 
   const CompanyMoviesSection({
     super.key,
@@ -38,7 +39,7 @@ class _CompanyMoviesSectionState extends State<CompanyMoviesSection> {
     }
 
     try {
-      final companyId = widget.productionCompanies.first['id'];
+      final companyId = widget.productionCompanies.first.id;
       final apiKey = dotenv.env['TMDB_API_KEY'];
       final url =
           "https://api.themoviedb.org/3/discover/movie?api_key=$apiKey&with_companies=$companyId";
