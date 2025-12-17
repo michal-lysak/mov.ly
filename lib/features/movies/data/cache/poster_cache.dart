@@ -29,8 +29,8 @@ class CachedPosterImage extends StatelessWidget {
         imageUrl: imageUrl,
         fit: fit,
         placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-          highlightColor: Theme.of(context).colorScheme.secondary.withOpacity(0.7),
+          baseColor: Theme.of(context).colorScheme.secondary,
+          highlightColor: Theme.of(context).colorScheme.tertiary,
           child: AspectRatio(
             aspectRatio: posterAspectRatio,
             child: Container(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
