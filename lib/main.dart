@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/adapters.dart';
-import 'package:movly/features/auth/data/auth_gate.dart'; // <-- Import the AuthGate
 import 'package:movly/features/auth/presentation/pages/signup_username_page.dart';
 import 'package:movly/features/movies/presentation/liking_titles.dart'; // Assuming this is PreHomePage
 import 'package:movly/features/movies/presentation/home/home_page.dart';
 import 'package:movly/firebase_options.dart';
-import 'features/auth/data/auth_gate.dart';
+import 'features/auth/presentation/components/auth_gate.dart';
 import 'features/movies/data/models/movie.dart';
 import 'features/movies/data/models/production_company.dart';
 import 'themes/dark_mode.dart';
