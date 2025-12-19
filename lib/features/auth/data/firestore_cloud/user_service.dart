@@ -1,5 +1,10 @@
-  import 'package:cloud_firestore/cloud_firestore.dart';
+  import 'dart:convert';
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
   import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+  import 'dart:html' as html;
 
 import '../../../movies/data/models/movie.dart';
 import '../../../movies/data/services/tmdb_service.dart';
@@ -79,6 +84,39 @@ import '../../../movies/data/services/tmdb_service.dart';
         rethrow;
       }
     }
+
+    Future<String?> uploadAvatar(dynamic file) async {
+      final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload',
+      );
+
+      late http.MultipartRequest request;
+
+      if (kIsWeb) {
+        // file is html.File
+        final bytes = await file.arrayBuffer().then((b) => Uint8List.view(b));
+        request = http.MultipartRequest('POST', uri)
+          ..fields['upload_preset'] = 'YOUR_UPLOAD_PRESET'
+          ..files.add(http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: file.name,
+          ));
+      } else {
+        // mobile
+        request = http.MultipartRequest('POST', uri)
+          ..fields['upload_preset'] = 'YOUR_UPLOAD_PRESET'
+          ..files.add(await http.MultipartFile.fromPath('file', file.path));
+      }
+
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final body = await response.stream.bytesToString();
+        return jsonDecode(body)['secure_url'];
+      }
+      return null;
+    }
+
 
 
     /// Checks if a username is available
