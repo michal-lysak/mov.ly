@@ -43,7 +43,7 @@ class CachedBackdropImage extends StatelessWidget {
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            color: Colors.white,
+            color: Colors.black,
           ),
         ),
 

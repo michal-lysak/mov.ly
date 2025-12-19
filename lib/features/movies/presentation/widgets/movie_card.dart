@@ -108,7 +108,7 @@ class MovieCard extends StatelessWidget {
                           style: GoogleFonts.afacad(
                             fontSize: metaFontSize,
                             color: Colors.grey[300],
-                            fontWeight: .w900,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                         SizedBox(width: 8),
@@ -128,7 +128,7 @@ class MovieCard extends StatelessWidget {
                                     cat,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    textAlign: .center,
+                                    textAlign: TextAlign.center,
                                     style: GoogleFonts.afacad(
                                       fontSize: metaFontSize,
                                       color: Colors.white,

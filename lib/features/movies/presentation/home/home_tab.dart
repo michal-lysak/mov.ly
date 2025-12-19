@@ -8,6 +8,7 @@ import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.d
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_sheet.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../data/models/movie.dart';
 import '../../data/cache/backdrop_cache.dart';
 import '../widgets/horizontal-posters-scrolling.dart';
@@ -146,6 +147,55 @@ class _HomeTabState extends State<HomeTab> {
     super.dispose();
   }
 
+  Widget buildForYouShimmer({
+  required double cardWidth,
+  required double cardHeight,
+  }) {
+  return SizedBox(
+    height: cardHeight + 40,
+    child: PageView.builder(
+      controller: _pageController,
+      itemCount: 5, // fake items
+      itemBuilder: (context, index) {
+        return AnimatedBuilder(
+          animation: _pageController,
+          builder: (context, child) {
+            double scale = 0.85;
+
+            if (_pageController.position.haveDimensions) {
+              final page = _pageController.page ?? 0.0;
+              scale = (1 - (page - index).abs() * 0.15).clamp(0.85, 1.0);
+            }
+
+            return Center(
+              child: Transform.scale(
+                scale: scale,
+                child: _shimmerCard(cardWidth, cardHeight),
+              ),
+            );
+          },
+        );
+      },
+    ),
+  );
+}
+
+Widget _shimmerCard(double width, double height) {
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(16),
+    child: Shimmer.fromColors(
+      baseColor: Colors.grey.shade800,
+      highlightColor: Colors.grey.shade600,
+      child: Container(
+        width: width,
+        height: height,
+        color: Colors.white,
+      ),
+    ),
+  );
+}
+
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -195,9 +245,9 @@ class _HomeTabState extends State<HomeTab> {
               const SizedBox(height: 20),
 
               if (_isLoading || _isGenerating)
-                SizedBox(
-                  height: cardHeight + 40,
-                  child: const Center(child: CircularProgressIndicator()),
+                buildForYouShimmer(
+                  cardWidth: cardWidth,
+                  cardHeight: cardHeight,
                 )
               else if (_forYouMovies.isEmpty)
                 SizedBox(
@@ -251,23 +301,26 @@ class _HomeTabState extends State<HomeTab> {
 
               MovieCarousel(
                 title: 'People love the most',
+                sectionKey: 'top_favorites',
                 moviesFuture: _favoriteService.fetchTopFavoriteMovies(),
               ),
 
-
               MovieCarousel(
-                  title: 'Now in Cinemas',
-                  moviesFuture: _tmdbService.fetchNowPlayingMovies()
+                title: 'Now in Cinemas',
+                sectionKey: 'now_playing',
+                moviesFuture: _tmdbService.fetchNowPlayingMovies(),
               ),
 
               MovieCarousel(
-                title: "Popular now",
+                title: 'Popular now',
+                sectionKey: 'popular',
                 moviesFuture: _tmdbService.fetchPopularMovies(),
               ),
 
               MovieCarousel(
-                  title: 'Horror',
-                  moviesFuture: _tmdbService.fetchHorrorMovies()
+                title: 'Horror',
+                sectionKey: 'horror',
+                moviesFuture: _tmdbService.fetchHorrorMovies(),
               ),
             ],
           ),
@@ -276,6 +329,9 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 }
+
+
+
 
 class MovieCard extends StatelessWidget {
   const MovieCard({

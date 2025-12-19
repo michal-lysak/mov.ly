@@ -100,7 +100,7 @@ class _SignupUsernamePageState extends State<SignupUsernamePage> {
                   child: Center(
                     child: Text(
                       'Continue',
-                      textAlign: .center,
+                      textAlign: TextAlign.center,
                       style: GoogleFonts.afacad(
                           fontWeight: FontWeight.bold,
                           fontSize: 24),

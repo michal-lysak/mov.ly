@@ -1,13 +1,36 @@
+import 'package:hive/hive.dart';
+import 'package:movly/features/movies/data/models/production_company.dart';
+
+part 'movie.g.dart';
+
+@HiveType(typeId: 0)
 class Movie {
+  @HiveField(0)
   final int id;
+
+  @HiveField(1)
   final String title;
+  
+  @HiveField(2)
   final String overview;
-  final String? posterPath;    // optional
-  final String? backdropPath;  // optional
+
+  @HiveField(3)
+  final String? posterPath;
+
+  @HiveField(4)
+  final String? backdropPath;
+
+  @HiveField(5)
   final String releaseDate;
+
+  @HiveField(6)
   final double voteAverage;
+
+  @HiveField(7)
   final List<String> categories;
-  final List<Map<String, dynamic>> productionCompanies;
+
+  @HiveField(8)
+  final List<ProductionCompany> productionCompanies;
 
   Movie({
     required this.id,
@@ -43,14 +66,15 @@ class Movie {
     }
 
     // Production companies
-    List<Map<String, dynamic>> companies = [];
-    if (json['production_companies'] != null && json['production_companies'] is List) {
+    List<ProductionCompany> companies = [];
+    if (json['production_companies'] != null &&
+        json['production_companies'] is List) {
       companies = (json['production_companies'] as List)
-          .map((c) => {
-        'id': c['id'],
-        'name': c['name'] ?? 'Unknown',
-      })
-          .cast<Map<String, dynamic>>()
+          .map((c) =>
+          ProductionCompany(
+            id: c['id'] as int,
+            name: c['name'] ?? 'Unknown',
+          ))
           .toList();
     }
 
@@ -63,13 +87,13 @@ class Movie {
       releaseDate: json['release_date'] ?? 'Unknown',
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
       categories: genres,
-      productionCompanies: companies,
+      productionCompanies: companies, // typed correctly
     );
   }
 
 
 
-  Map<String, dynamic> toJson() {
+    Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,

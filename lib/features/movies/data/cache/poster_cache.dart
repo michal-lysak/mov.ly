@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:shimmer/shimmer.dart';
 
+const double posterAspectRatio = 0.65;
+
 class CachedPosterImage extends StatelessWidget {
   final String imageUrl;
   final double borderRadius;
@@ -15,7 +17,6 @@ class CachedPosterImage extends StatelessWidget {
     this.fit = BoxFit.cover,
   });
 
-  // use posterUrl specifically
   factory CachedPosterImage.fromMovie(Movie movie) {
     return CachedPosterImage(imageUrl: movie.posterUrl);
   }
@@ -27,20 +28,17 @@ class CachedPosterImage extends StatelessWidget {
       child: CachedNetworkImage(
         imageUrl: imageUrl,
         fit: fit,
-        placeholder: (context, url) => Shimmer.fromColors(
-          baseColor: Colors.grey.shade700,
-          highlightColor: Colors.grey.shade500,
-          child: Container(
-            width: 130,  // fixed poster width
-            height: 200, // match carousel height
-            color: Colors.white,
+        placeholder: (_, __) => Shimmer.fromColors(
+          baseColor: Theme.of(context).colorScheme.secondary,
+          highlightColor: Theme.of(context).colorScheme.tertiary,
+          child: AspectRatio(
+            aspectRatio: posterAspectRatio,
+            child: Container(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
           ),
         ),
-
-
-        errorWidget: (context, url, error) => Container(
+        errorWidget: (_, __, ___) => Container(
           color: Colors.grey[800],
-          child: const Icon(Icons.movie, color: Colors.grey, size: 48),
+          child: const Icon(Icons.movie, color: Colors.grey, size: 40),
         ),
       ),
     );
