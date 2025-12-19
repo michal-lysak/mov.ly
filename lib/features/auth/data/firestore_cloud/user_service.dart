@@ -53,6 +53,8 @@ import '../../../movies/data/services/tmdb_service.dart';
         }
 
         final currentData = currentUser.data() as Map<String, dynamic>?;
+        
+        final String? name = currentData?['name'];
 
         // Remove old username if exists
         if (currentData != null && currentData.containsKey('username')) {
