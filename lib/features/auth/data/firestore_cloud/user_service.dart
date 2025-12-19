@@ -21,6 +21,7 @@ import '../../../movies/data/services/tmdb_service.dart';
     }) async {
       try {
         final data = {
+          'name': name,
           'email': email,
           'createdAt': FieldValue.serverTimestamp(),
         };
@@ -29,6 +30,7 @@ import '../../../movies/data/services/tmdb_service.dart';
           await _usernamesCollection.doc(username.toLowerCase()).set({
             'uid': userId,
             'username': username,
+            'name': name
           });
         }
 
@@ -62,6 +64,7 @@ import '../../../movies/data/services/tmdb_service.dart';
         await _usernamesCollection.doc(username.toLowerCase()).set({
           'uid': userId,
           'username': username,
+          'name': name
         });
 
         // Update user
