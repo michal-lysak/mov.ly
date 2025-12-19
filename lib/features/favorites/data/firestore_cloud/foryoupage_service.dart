@@ -38,85 +38,106 @@ class ForYouPageService {
 
   /// Generate ForYou movies, but check if favorites changed before heavy read
   Future<void> generateForYouMovies(String uid) async {
-    try {
-      final favDocRef = _db.collection('favoritesperuser').doc(uid);
+  try {
+    final favDocRef = _db.collection('favoritesperuser').doc(uid);
+    final forYouCol = _db.collection('users').doc(uid).collection('foryoupagelist');
 
-      // Only fetch timestamp first to minimize read
-      final favMeta = await favDocRef.get(const GetOptions(source: Source.cache));
-      final lastUpdate = favMeta.exists ? favMeta['lastUpdated'] : null;
+    // Fetch favorites once
+    final favDoc = await favDocRef.get();
+    if (!favDoc.exists) return;
 
-      // Check if we already generated recently
-      final forYouCol = _db.collection('users').doc(uid).collection('foryoupagelist');
-      final lastGeneratedSnap = await forYouCol
-          .orderBy('timestamp', descending: true)
-          .limit(1)
-          .get(const GetOptions(source: Source.cache));
-      final lastGenerated = lastGeneratedSnap.docs.isNotEmpty
-          ? lastGeneratedSnap.docs.first['timestamp']
-          : null;
+    final List<dynamic> favorites = favDoc['favorites'] ?? [];
+    if (favorites.isEmpty) return;
 
-      // Skip generation if nothing changed
-      if (lastUpdate != null && lastGenerated != null && lastUpdate.compareTo(lastGenerated) <= 0) {
-        return;
+    // Safe date parser
+    DateTime? parseFavoritedAt(String? s) {
+      if (s == null || s.isEmpty) return null;
+      try {
+        return DateTime.parse(s);
+      } catch (_) {
+        return null;
       }
-
-      // Now fetch full favorites only if needed
-      final favDoc = await favDocRef.get();
-      if (!favDoc.exists) return;
-      final List<dynamic> favorites = favDoc['favorites'] ?? [];
-      if (favorites.isEmpty) return;
-
-      favorites.sort((a, b) =>
-          (b['favoritedAt'] as Comparable).compareTo(a['favoritedAt']));
-
-      final ids = favorites.map((f) => f['id'].toString()).toList();
-      final keywordDocs = await Future.wait(
-        ids.map((id) => _db.collection('favoritemovies').doc(id).get()),
-      );
-
-      final keywords = <String>[];
-      for (var doc in keywordDocs) {
-        if (!doc.exists) continue;
-        final k = doc['keywords'] ?? [];
-        if (k.isNotEmpty) {
-          final shuffled = List.from(k)..shuffle(Random());
-          keywords.add(shuffled.first.toString());
-        }
-      }
-      if (keywords.isEmpty) return;
-
-      final searchKeywords = keywords.toSet().take(5).toList();
-      final discovered = <String>[];
-
-      for (final kw in searchKeywords) {
-        try {
-          final results = await _tmdb.discoverByKeyword(keyword: kw);
-          discovered.addAll(results.map((m) => m.id.toString()).take(3));
-        } catch (_) {}
-      }
-
-      final unique = discovered.toSet().take(20).toList();
-      if (unique.isEmpty) return;
-
-      // Batch write to Firestore
-      final batch = _db.batch();
-      final col = _db.collection('users').doc(uid).collection('foryoupagelist');
-      final existing = await col.get();
-      for (final doc in existing.docs) {
-        batch.delete(doc.reference);
-      }
-      for (final id in unique) {
-        batch.set(col.doc(id), {
-          'id': id,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
-      await batch.commit();
-    } catch (e) {
-      print("ForYou generation error: $e");
-      rethrow;
     }
+
+    // Sort favorites by favoritedAt descending
+    favorites.sort((a, b) {
+      final aDate = parseFavoritedAt(a['favoritedAt']);
+      final bDate = parseFavoritedAt(b['favoritedAt']);
+
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1; // push invalid dates to end
+      if (bDate == null) return -1;
+
+      return bDate.compareTo(aDate); // newest first
+    });
+
+    // Latest favorite timestamp
+    final lastUpdate = parseFavoritedAt(favorites.first['favoritedAt']);
+    if (lastUpdate == null) return;
+
+    // Check last generated ForYou
+    final lastGeneratedSnap = await forYouCol
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get(const GetOptions(source: Source.cache));
+
+    final lastGenerated = lastGeneratedSnap.docs.isNotEmpty
+        ? (lastGeneratedSnap.docs.first['timestamp'] as Timestamp).toDate()
+        : null;
+
+    if (lastGenerated != null && lastUpdate.compareTo(lastGenerated) <= 0) {
+      return; // nothing changed
+    }
+
+    // Generate keywords from favorites
+    final ids = favorites.map((f) => f['id'].toString()).toList();
+    final keywordDocs = await Future.wait(
+      ids.map((id) => _db.collection('favoritemovies').doc(id).get()),
+    );
+
+    final keywords = <String>[];
+    for (var doc in keywordDocs) {
+      if (!doc.exists) continue;
+      final k = doc['keywords'] ?? [];
+      if (k.isNotEmpty) {
+        final shuffled = List.from(k)..shuffle(Random());
+        keywords.add(shuffled.first.toString());
+      }
+    }
+    if (keywords.isEmpty) return;
+
+    final searchKeywords = keywords.toSet().take(5).toList();
+    final discovered = <String>[];
+
+    for (final kw in searchKeywords) {
+      try {
+        final results = await _tmdb.discoverByKeyword(keyword: kw);
+        discovered.addAll(results.map((m) => m.id.toString()).take(3));
+      } catch (_) {}
+    }
+
+    final unique = discovered.toSet().take(20).toList();
+    if (unique.isEmpty) return;
+
+    // Batch write to Firestore
+    final batch = _db.batch();
+    final existing = await forYouCol.get();
+    for (final doc in existing.docs) {
+      batch.delete(doc.reference);
+    }
+    for (final id in unique) {
+      batch.set(forYouCol.doc(id), {
+        'id': id,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  } catch (e) {
+    print("ForYou generation error: $e");
+    rethrow;
   }
+}
+
 
   void dispose() {
   }
