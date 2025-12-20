@@ -13,6 +13,10 @@ dependencies:
   google_fonts: ^6.3.2
   flutter_svg:  ^2.2.1
   iconify_flutter: ^0.0.7
+  image_picker: ^1.2.1
+  file_picker: 10.3.8
+  flutter_image_compress: 2.4.0
+
 
     # Firebase Core (required for all Firebase services)
   firebase_core: ^4.1.1

@@ -64,7 +64,7 @@ class _SocialTabState extends State<SocialTab> {
                   : _results.isEmpty
                   ? const Center(child: Text("No users found"))
                   : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(),
                 itemCount: _results.length,
                 itemBuilder: (context, index) {
                   final user = _results[index];
@@ -72,22 +72,70 @@ class _SocialTabState extends State<SocialTab> {
                     onTap: () {
                       widget.onUserTap(user['username']);
                     },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        user['username'] ?? "unknown",
-                        style: GoogleFonts.afacad(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withOpacity(0.3),
+                              backgroundImage: (user?['photoUrl'] != null &&
+                                  (user!['photoUrl'] as String).isNotEmpty)
+                                  ? NetworkImage(user!['photoUrl'])
+                                  : null,
+                              child: (user?['photoUrl'] == null ||
+                                  (user!['photoUrl'] as String).isEmpty)
+                                  ? const Icon(Icons.person, size: 18)
+                                  : null,
+                            ),
+
+                            const SizedBox(width: 14),
+
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    user['name'] ?? user['username'] ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 0),
+                                  Text(
+                                    "@${user['username'] ?? 'user'}",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.afacad(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   );
+
                 },
               ),
             ),
