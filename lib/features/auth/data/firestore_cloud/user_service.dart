@@ -1,7 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../../../movies/data/services/tmdb_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -9,6 +12,29 @@ class UserService {
   FirebaseFirestore.instance.collection('users');
   final CollectionReference _usernamesCollection =
   FirebaseFirestore.instance.collection('usernames');
+
+  late Box followingBox;
+
+  StreamSubscription<QuerySnapshot>? _followingSub;
+
+  UserService() {
+    if (Hive.isBoxOpen('followingBox')) {
+      followingBox = Hive.box('followingBox');
+    }
+  }
+
+  Future<void> initHive() async {
+    if (!Hive.isBoxOpen('followingBox')) {
+      followingBox = await Hive.openBox('followingBox');
+    } else {
+      followingBox = Hive.box('followingBox');
+    }
+  }
+
+
+
+
+
 
   final TMDBService _tmdb = TMDBService();
 
@@ -155,4 +181,147 @@ class UserService {
       return null;
     }
   }
+
+  Future<void> followUser(String theirUsername, String myUsername, String theirUserId) async {
+    final currentUserDoc = _usernamesCollection.doc(myUsername);
+    final currentUser = await currentUserDoc.get();
+
+    try {
+      // Add to their followers
+      final theirFollowerDoc = _firestore
+          .collection('usernames')
+          .doc(theirUsername)
+          .collection('followers')
+          .doc(currentUser['uid']);
+
+      await theirFollowerDoc.set({
+        'username': myUsername, // store your username in their followers
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // Add to my following
+      final myFollowingDoc = _firestore
+          .collection('usernames')
+          .doc(myUsername)
+          .collection('following')
+          .doc(theirUserId);
+
+      await myFollowingDoc.set({
+        'username': theirUsername,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      if (!Hive.isBoxOpen('followingBox')) {
+        await Hive.openBox('followingBox');
+      }
+
+      // Update local cache
+      followingBox.put(theirUserId, theirUsername);
+
+      debugPrint('Follow successful! Cache updated.');
+    } catch (e) {
+      debugPrint('Error following user: $e');
+    }
+  }
+
+  Future<void> unfollowUser(String theirUsername, String myUsername, String theirUserId) async {
+    // 1. Optimistic Update
+    if (Hive.isBoxOpen('followingBox')) {
+      followingBox.delete(theirUserId);
+    }
+
+    try {
+      final currentUserDoc = await _usernamesCollection.doc(myUsername).get();
+      final currentUid = currentUserDoc['uid'];
+
+      // 2. Remove from their followers
+      await _usernamesCollection.doc(theirUsername).collection('followers').doc(currentUid).delete();
+
+      // 3. Remove from my following
+      await _usernamesCollection.doc(myUsername).collection('following').doc(theirUserId).delete();
+
+    } catch (e) {
+      debugPrint('Error unfollowing: $e');
+      // Revert if failed
+      if (Hive.isBoxOpen('followingBox')) {
+        followingBox.put(theirUserId, theirUsername);
+      }
+    }
+  }
+
+  Future<void> loadFollowingCache(String myUsername) async {
+    final snapshot = await _firestore
+        .collection('usernames')
+        .doc(myUsername)
+        .collection('following')
+        .get();
+
+    final Map<String, String> data = {
+      for (var doc in snapshot.docs) doc.id: doc['username'] as String,
+    };
+
+    await followingBox.putAll(data);
+    debugPrint('Following cache loaded: ${data.length} users');
+  }
+
+  bool isFollowing(String userId) {
+    if (!Hive.isBoxOpen('followingBox')) return false;
+    return followingBox.containsKey(userId);
+  }
+
+
+  /*bool isFollower(String userId) {
+    return followersBox.containsKey(userId);
+  }
+*/
+
+
+  void listenToFollowingChanges(String myUsername) {
+    _followingSub?.cancel();
+
+    _followingSub = _firestore
+        .collection('usernames')
+        .doc(myUsername)
+        .collection('following')
+        .snapshots()
+        .listen((snapshot) async {
+
+      if (!Hive.isBoxOpen('followingBox')) {
+        await Hive.openBox('followingBox');
+      }
+      final box = Hive.box('followingBox');
+
+      // 1. RECONCILIATION (Cleanup "Zombie" records)
+      // Get all IDs currently on the server
+      final serverIds = snapshot.docs.map((doc) => doc.id).toSet();
+      // Get all IDs currently in Hive
+      final cachedIds = box.keys.cast<String>().toSet();
+
+      // Find IDs that are in Hive but NOT on the server anymore
+      final zombies = cachedIds.difference(serverIds);
+      for (var id in zombies) {
+        box.delete(id);
+      }
+
+      // 2. REAL-TIME UPDATES
+      for (final change in snapshot.docChanges) {
+        final userId = change.doc.id;
+        final data = change.doc.data();
+
+        switch (change.type) {
+          case DocumentChangeType.added:
+          case DocumentChangeType.modified:
+            if (data != null) {
+              box.put(userId, data['username']);
+            }
+            break;
+          case DocumentChangeType.removed:
+            box.delete(userId);
+            break;
+        }
+      }
+    });
+  }
+
+
 }
