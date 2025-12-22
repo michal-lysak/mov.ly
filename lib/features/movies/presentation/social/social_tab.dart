@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart'; // REQUIRED
 import '../../../auth/data/firestore_cloud/user_service.dart';
-import '../UserProfile/user_profile_tab.dart';
 import 'package:movly/features/movies/presentation/widgets/searching_bar.dart';
 
 class SocialTab extends StatefulWidget {
-  final Function(String uid) onUserTap; // callback when a user is tapped
-  const SocialTab({super.key, required this.onUserTap});
+  // Use 'this.' to automatically initialize the final variables above
+  const SocialTab({
+    super.key,
+    required this.userService,
+    required this.onUserTap,
+    required this.currentUserUsername,
+  });
+
+  final UserService userService;
+  final Function(String uid) onUserTap;
+  final String currentUserUsername;
 
   @override
   State<SocialTab> createState() => _SocialTabState();
@@ -14,10 +23,14 @@ class SocialTab extends StatefulWidget {
 
 class _SocialTabState extends State<SocialTab> {
   final _controller = TextEditingController();
-  final _userService = UserService();
-
   List<Map<String, dynamic>> _results = [];
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.userService.listenToFollowingChanges(widget.currentUserUsername);
+  }
 
   void _onChanged(String query) async {
     if (query.trim().isEmpty) {
@@ -26,12 +39,15 @@ class _SocialTabState extends State<SocialTab> {
     }
 
     setState(() => _isLoading = true);
-    final users = await _userService.searchUsers(query);
+    final users = await widget.userService.searchUsers(query);
 
-    setState(() {
-      _results = users;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        // FILTER: Remove the current user from the results list
+        _results = users.where((u) => u['username'] != widget.currentUserUsername).toList();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -41,21 +57,13 @@ class _SocialTabState extends State<SocialTab> {
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
         child: Column(
           children: [
-            SizedBox(height: 40),
-
+            const SizedBox(height: 40),
             Row(
-                children: [
-                  Text(
-                    'Social',
-                    style: GoogleFonts.afacad(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-
-            SizedBox(height: 24),
+              children: [
+                Text('Social', style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 24),
             SearchingBar(controller: _controller, onChanged: _onChanged),
             const SizedBox(height: 10),
             Expanded(
@@ -64,14 +72,14 @@ class _SocialTabState extends State<SocialTab> {
                   : _results.isEmpty
                   ? const Center(child: Text("No users found"))
                   : ListView.builder(
-                padding: const EdgeInsets.symmetric(),
                 itemCount: _results.length,
                 itemBuilder: (context, index) {
                   final user = _results[index];
+                  final String theirUserId = user['uid'];
+                  final String theirUsername = user['username'] ?? 'user';
+
                   return GestureDetector(
-                    onTap: () {
-                      widget.onUserTap(user['username']);
-                    },
+                    onTap: () => widget.onUserTap(theirUsername),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Container(
@@ -82,60 +90,60 @@ class _SocialTabState extends State<SocialTab> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             CircleAvatar(
                               radius: 22,
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .secondary
-                                  .withOpacity(0.3),
-                              backgroundImage: (user?['photoUrl'] != null &&
-                                  (user!['photoUrl'] as String).isNotEmpty)
-                                  ? NetworkImage(user!['photoUrl'])
+                              backgroundImage: (user['photoUrl'] != null && user['photoUrl'].isNotEmpty)
+                                  ? NetworkImage(user['photoUrl'])
                                   : null,
-                              child: (user?['photoUrl'] == null ||
-                                  (user!['photoUrl'] as String).isEmpty)
+                              child: (user['photoUrl'] == null || user['photoUrl'].isEmpty)
                                   ? const Icon(Icons.person, size: 18)
                                   : null,
                             ),
-
                             const SizedBox(width: 14),
-
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    user['name'] ?? user['username'] ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.afacad(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 0),
-                                  Text(
-                                    "@${user['username'] ?? 'user'}",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.afacad(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
+                                  Text(user['name'] ?? theirUsername,
+                                      style: GoogleFonts.afacad(fontSize: 17, fontWeight: FontWeight.w600)),
+                                  Text("@$theirUsername",
+                                      style: GoogleFonts.afacad(fontSize: 12, color: Colors.grey)),
                                 ],
                               ),
+                            ),
+                            ValueListenableBuilder(
+                              valueListenable: Hive.box('followingBox').listenable(),
+                              builder: (context, Box box, child) {
+                                final bool isFollowing = box.containsKey(theirUserId);
+                                return GestureDetector(
+                                  onTap: () async {
+                                    if (isFollowing) {
+                                      await widget.userService.unfollowUser(theirUsername, widget.currentUserUsername, theirUserId);
+                                    } else {
+                                      await widget.userService.followUser(theirUsername, widget.currentUserUsername, theirUserId);
+                                    }
+                                  },
+                                  child: Container(
+                                    height: 30,
+                                    width: 75,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: isFollowing ? Colors.grey[700] : Theme.of(context).colorScheme.surface,
+                                    ),
+                                    child: Center(
+                                      child: Text(isFollowing ? 'Following' : 'Follow',
+                                          style: GoogleFonts.afacad(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
                       ),
                     ),
                   );
-
                 },
               ),
             ),
