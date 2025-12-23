@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // REQUIRED
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import '../../../auth/data/firestore_cloud/user_service.dart';
 import 'package:movly/features/movies/presentation/widgets/searching_bar.dart';
 
+import '../../data/models/movie.dart';
+import '../../data/services/tmdb_service.dart';
+
 class SocialTab extends StatefulWidget {
-  // Use 'this.' to automatically initialize the final variables above
   const SocialTab({
     super.key,
     required this.userService,
@@ -25,11 +28,53 @@ class _SocialTabState extends State<SocialTab> {
   final _controller = TextEditingController();
   List<Map<String, dynamic>> _results = [];
   bool _isLoading = false;
+  final TMDBService _tmdb = TMDBService();
 
   @override
   void initState() {
     super.initState();
+    // This starts the real-time stream that keeps Hive updated
     widget.userService.listenToFollowingChanges(widget.currentUserUsername);
+  }
+
+// --- HELPER FUNCTION: Added inside the class scope ---
+  List<Map<String, dynamic>> getFollowingListFromCache() { // Changed String -> dynamic
+    final box = Hive.box('followingBox');
+
+    final list = box.keys.map((uid) {
+      final data = box.get(uid);
+
+      if (data is Map) {
+        // safely extract the movie list, defaulting to empty if missing
+        final rawMovies = data['favMovies'] ?? [];
+
+        return {
+          'uid': uid.toString(),
+          'username': data['username']?.toString() ?? 'Unknown',
+          'name': data['name']?.toString() ?? 'Unknown',
+          'photoUrl': data['photoUrl']?.toString() ?? '',
+          'favMovies': rawMovies, // Pass the list through!
+        };
+      }
+
+      // Fallback for legacy data (old cache)
+      return {
+        'uid': uid.toString(),
+        'username': data?.toString() ?? 'Unknown',
+        'name': data?.toString() ?? 'Unknown',
+        'photoUrl': '',
+        'favMovies': [], // Empty list for old data
+      };
+    }).toList();
+
+    // Sort alphabetically by username
+    list.sort((a, b) {
+      final nameA = (a['username'] as String).toLowerCase();
+      final nameB = (b['username'] as String).toLowerCase();
+      return nameA.compareTo(nameB);
+    });
+
+    return list;
   }
 
   void _onChanged(String query) async {
@@ -43,7 +88,6 @@ class _SocialTabState extends State<SocialTab> {
 
     if (mounted) {
       setState(() {
-        // FILTER: Remove the current user from the results list
         _results = users.where((u) => u['username'] != widget.currentUserUsername).toList();
         _isLoading = false;
       });
@@ -56,12 +100,12 @@ class _SocialTabState extends State<SocialTab> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, // Keeps "Social" title left
           children: [
             const SizedBox(height: 40),
-            Row(
-              children: [
-                Text('Social', style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600)),
-              ],
+            Text(
+              'Social',
+              style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 24),
             SearchingBar(controller: _controller, onChanged: _onChanged),
@@ -70,86 +114,228 @@ class _SocialTabState extends State<SocialTab> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _results.isEmpty
-                  ? const Center(child: Text("No users found"))
-                  : ListView.builder(
-                itemCount: _results.length,
+                  ? _buildFollowingSection() // Separate method for clarity
+                  : _buildSearchResults(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFollowingSection() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          Text(
+            "People you follow",
+            style: GoogleFonts.afacad(fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          ValueListenableBuilder(
+            valueListenable: Hive.box('followingBox').listenable(),
+            builder: (context, Box box, _) {
+              final following = getFollowingListFromCache();
+
+              if (following.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text("Not following anyone yet", style: GoogleFonts.afacad(color: Colors.grey)),
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: following.length,
                 itemBuilder: (context, index) {
-                  final user = _results[index];
-                  final String theirUserId = user['uid'];
+                  final user = following[index];
                   final String theirUsername = user['username'] ?? 'user';
+                  final String photoUrl = user['photoUrl'] ?? '';
+                  final String theirName = user['name'] ?? theirUsername;
+
+                  // Get the movies list from the Map
+                  final List favMovies = user['favMovies'] ?? [];
 
                   return GestureDetector(
                     onTap: () => widget.onUserTap(theirUsername),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        // Height increased slightly to fit both info and posters
+                        height: 155,
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.secondary,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundImage: (user['photoUrl'] != null && user['photoUrl'].isNotEmpty)
-                                  ? NetworkImage(user['photoUrl'])
-                                  : null,
-                              child: (user['photoUrl'] == null || user['photoUrl'].isEmpty)
-                                  ? const Icon(Icons.person, size: 18)
-                                  : null,
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // SECTION 1: USER INFO
+                              Row(
                                 children: [
-                                  Text(user['name'] ?? theirUsername,
-                                      style: GoogleFonts.afacad(fontSize: 17, fontWeight: FontWeight.w600)),
-                                  Text("@$theirUsername",
-                                      style: GoogleFonts.afacad(fontSize: 12, color: Colors.grey)),
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: Colors.grey.shade800,
+                                    backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                                    child: photoUrl.isEmpty
+                                        ? const Icon(Icons.person, size: 16, color: Colors.white)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        theirName,
+                                        style: GoogleFonts.afacad(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600),
+                                      ),
+                                      Text(
+                                        '@$theirUsername',
+                                        style: GoogleFonts.afacad(fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                            ),
-                            ValueListenableBuilder(
-                              valueListenable: Hive.box('followingBox').listenable(),
-                              builder: (context, Box box, child) {
-                                final bool isFollowing = box.containsKey(theirUserId);
-                                return GestureDetector(
-                                  onTap: () async {
-                                    if (isFollowing) {
-                                      await widget.userService.unfollowUser(theirUsername, widget.currentUserUsername, theirUserId);
-                                    } else {
-                                      await widget.userService.followUser(theirUsername, widget.currentUserUsername, theirUserId);
-                                    }
-                                  },
-                                  child: Container(
-                                    height: 30,
-                                    width: 75,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                      color: isFollowing ? Colors.grey[700] : Theme.of(context).colorScheme.surface,
-                                    ),
-                                    child: Center(
-                                      child: Text(isFollowing ? 'Following' : 'Follow',
-                                          style: GoogleFonts.afacad(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                                    ),
+
+                              const SizedBox(height: 12),
+
+                              // SECTION 2: MOVIE POSTERS
+                              if (favMovies.isNotEmpty)
+                                Expanded(
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: favMovies.length > 5 ? 5 : favMovies.length,
+                                    itemBuilder: (context, mIndex) {
+                                      final movieMap = favMovies[mIndex];
+                                      final int movieId = movieMap['id'];
+
+                                      return FutureBuilder<Movie?>(
+                                        future: _tmdb.fetchMovieById(movieId), // only fetch when building
+                                        builder: (context, snapshot) {
+                                          if (!snapshot.hasData) {
+                                            return Container(
+                                              width: 55,
+                                              margin: const EdgeInsets.only(right: 8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black26,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Icon(Icons.movie_filter, size: 20, color: Colors.white10),
+                                            );
+                                          }
+
+                                          final movie = snapshot.data!;
+                                          return Container(
+                                            width: 55,
+                                            margin: const EdgeInsets.only(right: 8),
+                                            child: CachedPosterImage.fromMovie(movie),
+                                          );
+                                        },
+                                      );
+                                    },
                                   ),
-                                );
-                              },
-                            ),
-                          ],
+                                )
+
+
+                              else
+                                Text(
+                                  "No favorites yet",
+                                  style: GoogleFonts.afacad(fontSize: 12, color: Colors.white24, fontStyle: FontStyle.italic),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   );
                 },
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          )
+        ],
       ),
+    );
+  }
+
+  // --- UI: View shown when searching ---
+  Widget _buildSearchResults() {
+    return ListView.builder(
+      itemCount: _results.length,
+      itemBuilder: (context, index) {
+        final user = _results[index];
+        final String theirUserId = user['uid'];
+        final String theirUsername = user['username'] ?? 'user';
+
+        return GestureDetector(
+          onTap: () => widget.onUserTap(theirUsername),
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondary,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundImage: (user['photoUrl'] != null && user['photoUrl'].isNotEmpty)
+                      ? NetworkImage(user['photoUrl'])
+                      : null,
+                  child: (user['photoUrl'] == null || user['photoUrl'].isEmpty)
+                      ? const Icon(Icons.person, size: 18)
+                      : null,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user['name'] ?? theirUsername,
+                          style: GoogleFonts.afacad(fontSize: 17, fontWeight: FontWeight.w600)),
+                      Text("@$theirUsername",
+                          style: GoogleFonts.afacad(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                ValueListenableBuilder(
+                  valueListenable: Hive.box('followingBox').listenable(),
+                  builder: (context, Box box, child) {
+                    final bool isFollowing = box.containsKey(theirUserId);
+                    return GestureDetector(
+                      onTap: () async {
+                        if (isFollowing) {
+                          await widget.userService.unfollowUser(theirUsername, widget.currentUserUsername, theirUserId);
+                        } else {
+                          await widget.userService.followUser(theirUsername, widget.currentUserUsername, theirUserId);
+                        }
+                      },
+                      child: Container(
+                        height: 30,
+                        width: 75,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: isFollowing ? Colors.grey[700] : Theme.of(context).colorScheme.surface,
+                        ),
+                        child: Center(
+                          child: Text(isFollowing ? 'Following' : 'Follow',
+                              style: GoogleFonts.afacad(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
