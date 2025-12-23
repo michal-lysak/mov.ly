@@ -183,44 +183,80 @@ class UserService {
   }
 
   Future<void> followUser(String theirUsername, String myUsername, String theirUserId) async {
-    final currentUserDoc = _usernamesCollection.doc(myUsername);
-    final currentUser = await currentUserDoc.get();
+    // 1. Get current user ID (using the actual UID from Auth is safer)
+    final String myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (myUid.isEmpty) {
+      debugPrint('User not logged in');
+      return;
+    }
+
+    // Ensure case-consistency for Document IDs
+    final String myDocPath = myUsername.toLowerCase();
+    final String theirDocPath = theirUsername.toLowerCase();
 
     try {
-      // Add to their followers
+      // --- FIRESTORE TRANSACTION: Update both parties ---
+
+      // A. Add YOU to THEIR 'followers' sub-collection
       final theirFollowerDoc = _firestore
           .collection('usernames')
-          .doc(theirUsername)
+          .doc(theirDocPath)
           .collection('followers')
-          .doc(currentUser['uid']);
+          .doc(myUid);
 
-      await theirFollowerDoc.set({
-        'username': myUsername, // store your username in their followers
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // Add to my following
+      // B. Add THEM to YOUR 'following' sub-collection
       final myFollowingDoc = _firestore
           .collection('usernames')
-          .doc(myUsername)
+          .doc(myDocPath)
           .collection('following')
           .doc(theirUserId);
 
-      await myFollowingDoc.set({
-        'username': theirUsername,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+      // Execute both Firestore writes
+      await Future.wait([
+        theirFollowerDoc.set({
+          'username': myUsername,
+          'timestamp': FieldValue.serverTimestamp(),
+        }),
+        myFollowingDoc.set({
+          'username': theirUsername,
+          'timestamp': FieldValue.serverTimestamp(),
+        }),
+      ]);
+
+      // --- CACHE HYDRATION: Update your local Hive box ---
 
       if (!Hive.isBoxOpen('followingBox')) {
         await Hive.openBox('followingBox');
       }
 
-      // Update local cache
-      followingBox.put(theirUserId, theirUsername);
+      // Fetch their profile and movies in parallel to update Hive immediately
+      final results = await Future.wait([
+        _usernamesCollection.doc(theirDocPath).get(),
+        _firestore.collection('favoritesperuser').doc(theirUserId).get(),
+      ]);
 
-      debugPrint('Follow successful! Cache updated.');
+      final targetUserDoc = results[0];
+      final favsDoc = results[1];
+
+      final targetData = targetUserDoc.data() as Map<String, dynamic>?;
+
+      // Extract the favorites array (the 1-read strategy)
+      final List<dynamic> favMoviesList = (favsDoc.exists)
+          ? (favsDoc.data() as Map<String, dynamic>)['favorites'] ?? []
+          : [];
+
+      // Save the full package to Hive
+      // This ensures your ValueListenableBuilder in SocialTab updates instantly
+      await followingBox.put(theirUserId, {
+        'username': theirUsername,
+        'photoUrl': targetData?['photoUrl'] ?? '',
+        'name': targetData?['name'] ?? theirUsername,
+        'favMovies': favMoviesList,
+      });
+
+      debugPrint('Follow successful: Both Firestore and Hive updated.');
     } catch (e) {
-      debugPrint('Error following user: $e');
+      debugPrint('Error during follow process: $e');
     }
   }
 
@@ -285,42 +321,81 @@ class UserService {
         .collection('following')
         .snapshots()
         .listen((snapshot) async {
-
       if (!Hive.isBoxOpen('followingBox')) {
         await Hive.openBox('followingBox');
       }
       final box = Hive.box('followingBox');
 
-      // 1. RECONCILIATION (Cleanup "Zombie" records)
-      // Get all IDs currently on the server
+      // 1. RECONCILIATION: Cleanup local cache
       final serverIds = snapshot.docs.map((doc) => doc.id).toSet();
-      // Get all IDs currently in Hive
       final cachedIds = box.keys.cast<String>().toSet();
-
-      // Find IDs that are in Hive but NOT on the server anymore
       final zombies = cachedIds.difference(serverIds);
       for (var id in zombies) {
         box.delete(id);
       }
 
-      // 2. REAL-TIME UPDATES
+      // 2. FETCH & CACHE
       for (final change in snapshot.docChanges) {
-        final userId = change.doc.id;
-        final data = change.doc.data();
+        final theirUid = change.doc.id;
+        final followData = change.doc.data() as Map<String, dynamic>?;
 
-        switch (change.type) {
-          case DocumentChangeType.added:
-          case DocumentChangeType.modified:
-            if (data != null) {
-              box.put(userId, data['username']);
+        if (change.type == DocumentChangeType.added || change.type == DocumentChangeType.modified) {
+          if (followData != null) {
+            final String username = followData['username'];
+
+            // READ 1: Get Profile Info (Name, PFP)
+            final userDoc = await _firestore.collection('usernames').doc(username).get();
+
+            // READ 2: Get the single document containing the movie array
+            final favsDoc = await _firestore.collection('favoritesperuser').doc(theirUid).get();
+
+            if (userDoc.exists) {
+              final userData = userDoc.data()!;
+
+              // Extract the 'favorites' array from the second read
+              final List<dynamic> favMoviesList = (favsDoc.exists)
+                  ? (favsDoc.data()?['favorites'] ?? [])
+                  : [];
+
+              // SAVE EVERYTHING TO HIVE
+              box.put(theirUid, {
+                'username': username,
+                'photoUrl': userData['photoUrl'] ?? '',
+                'name': userData['name'] ?? username,
+                'favMovies': favMoviesList, // Full array stored locally
+              });
             }
-            break;
-          case DocumentChangeType.removed:
-            box.delete(userId);
-            break;
+          }
+        } else if (change.type == DocumentChangeType.removed) {
+          box.delete(theirUid);
         }
       }
     });
+  }
+
+  List<Map<String, dynamic>> getFollowingListFromCache() {
+    final box = Hive.box('followingBox');
+
+    return box.keys.map((uid) {
+      final data = box.get(uid);
+
+      if (data is Map) {
+        return {
+          'uid': uid.toString(),
+          'username': (data['username'] ?? '').toString(),
+          'photoUrl': (data['photoUrl'] ?? '').toString(),
+          'name': (data['name'] ?? '').toString(),
+          'favMovies': data['favMovies'] ?? [], // This was missing
+        };
+      } else {
+        return {
+          'uid': uid.toString(),
+          'username': data.toString(),
+          'photoUrl': '',
+          'favMovies': [],
+        };
+      }
+    }).toList();
   }
 
 
