@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import '../../../movies/data/services/tmdb_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../../social/data/models/followed_user.dart';
+
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final CollectionReference _usersCollection =
@@ -373,30 +375,19 @@ class UserService {
     });
   }
 
-  List<Map<String, dynamic>> getFollowingListFromCache() {
+  List<FollowedUser> getFollowingListFromCache() {
     final box = Hive.box('followingBox');
 
     return box.keys.map((uid) {
       final data = box.get(uid);
 
       if (data is Map) {
-        return {
-          'uid': uid.toString(),
-          'username': (data['username'] ?? '').toString(),
-          'photoUrl': (data['photoUrl'] ?? '').toString(),
-          'name': (data['name'] ?? '').toString(),
-          'favMovies': data['favMovies'] ?? [], // This was missing
-        };
-      } else {
-        return {
-          'uid': uid.toString(),
-          'username': data.toString(),
-          'photoUrl': '',
-          'favMovies': [],
-        };
+        return FollowedUser.fromHive(uid.toString(), data);
       }
-    }).toList();
+      return null;
+    }).whereType<FollowedUser>().toList();
   }
+
 
 
 }
