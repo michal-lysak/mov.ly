@@ -5,6 +5,7 @@ import 'package:movly/features/movies/data/cache/poster_cache.dart';
 import '../../../auth/data/firestore_cloud/user_service.dart';
 import 'package:movly/features/movies/presentation/widgets/searching_bar.dart';
 
+import '../../../social/data/models/followed_user.dart';
 import '../../data/models/movie.dart';
 import '../../data/services/tmdb_service.dart';
 
@@ -38,44 +39,25 @@ class _SocialTabState extends State<SocialTab> {
   }
 
 // --- HELPER FUNCTION: Added inside the class scope ---
-  List<Map<String, dynamic>> getFollowingListFromCache() { // Changed String -> dynamic
+  List<FollowedUser> getFollowingListFromCache() {
     final box = Hive.box('followingBox');
 
     final list = box.keys.map((uid) {
       final data = box.get(uid);
 
       if (data is Map) {
-        // safely extract the movie list, defaulting to empty if missing
-        final rawMovies = data['favMovies'] ?? [];
-
-        return {
-          'uid': uid.toString(),
-          'username': data['username']?.toString() ?? 'Unknown',
-          'name': data['name']?.toString() ?? 'Unknown',
-          'photoUrl': data['photoUrl']?.toString() ?? '',
-          'favMovies': rawMovies, // Pass the list through!
-        };
+        return FollowedUser.fromHive(uid.toString(), data);
       }
+      return null; // ignore invalid entries
+    }).whereType<FollowedUser>().toList();
 
-      // Fallback for legacy data (old cache)
-      return {
-        'uid': uid.toString(),
-        'username': data?.toString() ?? 'Unknown',
-        'name': data?.toString() ?? 'Unknown',
-        'photoUrl': '',
-        'favMovies': [], // Empty list for old data
-      };
-    }).toList();
-
-    // Sort alphabetically by username
-    list.sort((a, b) {
-      final nameA = (a['username'] as String).toLowerCase();
-      final nameB = (b['username'] as String).toLowerCase();
-      return nameA.compareTo(nameB);
-    });
+    // sort alphabetically by username
+    list.sort((a, b) => a.username.toLowerCase().compareTo(b.username.toLowerCase()));
 
     return list;
   }
+
+
 
   void _onChanged(String query) async {
     if (query.trim().isEmpty) {
@@ -124,142 +106,125 @@ class _SocialTabState extends State<SocialTab> {
   }
 
   Widget _buildFollowingSection() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          Text(
-            "People you follow",
-            style: GoogleFonts.afacad(fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white),
-          ),
-          const SizedBox(height: 10),
-          ValueListenableBuilder(
-            valueListenable: Hive.box('followingBox').listenable(),
-            builder: (context, Box box, _) {
-              final following = getFollowingListFromCache();
+    final List<FollowedUser> following = getFollowingListFromCache();
 
-              if (following.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text("Not following anyone yet", style: GoogleFonts.afacad(color: Colors.grey)),
-                );
-              }
+    if (following.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text("Not following anyone yet", style: GoogleFonts.afacad(color: Colors.grey)),
+      );
+    }
 
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: following.length,
-                itemBuilder: (context, index) {
-                  final user = following[index];
-                  final String theirUsername = user['username'] ?? 'user';
-                  final String photoUrl = user['photoUrl'] ?? '';
-                  final String theirName = user['name'] ?? theirUsername;
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: following.length,
+      itemBuilder: (context, index) {
+        final FollowedUser user = following[index];
 
-                  // Get the movies list from the Map
-                  final List favMovies = user['favMovies'] ?? [];
-
-                  return GestureDetector(
-                    onTap: () => widget.onUserTap(theirUsername),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Container(
-                        // Height increased slightly to fit both info and posters
-                        height: 155,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondary,
-                          borderRadius: BorderRadius.circular(16),
+        return GestureDetector(
+          onTap: () => widget.onUserTap(user.username),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Container(
+              height: 155,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // USER INFO
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.grey.shade800,
+                          backgroundImage: user.photoUrl.isNotEmpty
+                              ? NetworkImage(user.photoUrl)
+                              : null,
+                          child: user.photoUrl.isEmpty
+                              ? const Icon(Icons.person, size: 16, color: Colors.white)
+                              : null,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // SECTION 1: USER INFO
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Colors.grey.shade800,
-                                    backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                                    child: photoUrl.isEmpty
-                                        ? const Icon(Icons.person, size: 16, color: Colors.white)
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        theirName,
-                                        style: GoogleFonts.afacad(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600),
-                                      ),
-                                      Text(
-                                        '@$theirUsername',
-                                        style: GoogleFonts.afacad(fontSize: 12, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // SECTION 2: MOVIE POSTERS
-                              if (favMovies.isNotEmpty)
-                                Expanded(
-                                  child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: favMovies.length > 5 ? 5 : favMovies.length,
-                                    itemBuilder: (context, mIndex) {
-                                      final movieMap = favMovies[mIndex];
-                                      final int movieId = movieMap['id'];
-
-                                      return FutureBuilder<Movie?>(
-                                        future: _tmdb.fetchMovieById(movieId), // only fetch when building
-                                        builder: (context, snapshot) {
-                                          if (!snapshot.hasData) {
-                                            return Container(
-                                              width: 55,
-                                              margin: const EdgeInsets.only(right: 8),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black26,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: const Icon(Icons.movie_filter, size: 20, color: Colors.white10),
-                                            );
-                                          }
-
-                                          final movie = snapshot.data!;
-                                          return Container(
-                                            width: 55,
-                                            margin: const EdgeInsets.only(right: 8),
-                                            child: CachedPosterImage.fromMovie(movie),
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
-                                )
-
-
-                              else
-                                Text(
-                                  "No favorites yet",
-                                  style: GoogleFonts.afacad(fontSize: 12, color: Colors.white24, fontStyle: FontStyle.italic),
-                                ),
-                            ],
-                          ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.displayName,
+                              style: GoogleFonts.afacad(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '@${user.username}',
+                              style: GoogleFonts.afacad(
+                                  fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
-                  );
-                },
-              );
-            },
-          )
-        ],
-      ),
+
+                    const SizedBox(height: 12),
+
+                    // MOVIE POSTERS
+                    if (user.favMovieIds.isNotEmpty)
+                      Expanded(
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount:
+                          user.favMovieIds.length > 5 ? 5 : user.favMovieIds.length,
+                          itemBuilder: (context, mIndex) {
+                            final int movieId = user.favMovieIds[mIndex];
+
+                            return FutureBuilder<Movie?>(
+                              future: _tmdb.fetchMovieById(movieId),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return Container(
+                                    width: 55,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black26,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.movie_filter,
+                                        size: 20, color: Colors.white10),
+                                  );
+                                }
+
+                                final movie = snapshot.data!;
+                                return Container(
+                                  width: 55,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  child: CachedPosterImage.fromMovie(movie),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      )
+                    else
+                      Text(
+                        "No favorites yet",
+                        style: GoogleFonts.afacad(
+                            fontSize: 12,
+                            color: Colors.white24,
+                            fontStyle: FontStyle.italic),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
