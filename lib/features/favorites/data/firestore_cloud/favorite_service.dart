@@ -15,7 +15,7 @@ class FavoriteService {
     final userRef = _db.collection('favoritesperuser').doc(userId);
     await userRef.set({
       _favoriteListName: FieldValue.arrayUnion([
-        {'id': movieId, 'addedAt': DateTime.now().toIso8601String()}
+        {'id': movieId, 'favoritedAt': DateTime.now().toIso8601String()}
       ])
     }, SetOptions(merge: true));
 

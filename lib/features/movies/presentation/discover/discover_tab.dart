@@ -15,15 +15,19 @@ class DiscoverPage extends StatefulWidget {
 
 class _DiscoverPageState extends State<DiscoverPage> {
   final TextEditingController searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final tmdbService = TMDBService();
 
   List<Movie> searchResults = [];
   List<Movie> categoryMovies = [];
 
-  // FIXED STATE MANAGEMENT
   bool isSearchMode = false;
   bool isLoadingSearch = false;
   bool isLoadingCategory = false;
+  bool isLoadingMore = false;
+
+  int _currentPage = 1;
+  String? _currentCategory;
 
   final Map<String, int> genreIds = {
     "Action": 28,
@@ -51,41 +55,66 @@ class _DiscoverPageState extends State<DiscoverPage> {
   void initState() {
     super.initState();
     _fetchCategoryMovies(null);
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >
+          _scrollController.position.maxScrollExtent - 300 &&
+          !isLoadingMore &&
+          !isSearchMode) {
+        _fetchCategoryMovies(_currentCategory, loadMore: true);
+      }
+    });
   }
 
   @override
   void dispose() {
     searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   // -----------------------
-  // CATEGORY FETCHING
+  // CATEGORY FETCHING (PAGED)
   // -----------------------
-  Future<void> _fetchCategoryMovies(String? category) async {
+  Future<void> _fetchCategoryMovies(
+      String? category, {
+        bool loadMore = false,
+      }) async {
     if (isSearchMode) return;
 
-    setState(() => isLoadingCategory = true);
+    if (!loadMore) {
+      _currentPage = 1;
+      categoryMovies.clear();
+      setState(() => isLoadingCategory = true);
+    } else {
+      setState(() => isLoadingMore = true);
+    }
+
+    _currentCategory = category;
 
     List<Movie> results;
 
     if (category == null) {
-      results = await tmdbService.fetchPopularMovies();
+      results = await tmdbService.fetchPopularMovies(page: _currentPage);
     } else {
       final id = genreIds[category];
-      results = id != null ? await tmdbService.fetchMoviesByGenre(id) : [];
+      results = id != null
+          ? await tmdbService.fetchMoviesByGenre(id, page: _currentPage)
+          : [];
     }
 
     if (!mounted) return;
 
     setState(() {
-      categoryMovies = results;
+      categoryMovies.addAll(results);
+      _currentPage++;
       isLoadingCategory = false;
+      isLoadingMore = false;
     });
   }
 
   // -----------------------
-  // SEARCH HANDLING
+  // SEARCH
   // -----------------------
   void _onSearchChanged(String value) async {
     final trimmed = value.trim();
@@ -95,7 +124,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
         isSearchMode = false;
         searchResults = [];
       });
-
       _fetchCategoryMovies(null);
       return;
     }
@@ -116,7 +144,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   }
 
   // -----------------------
-  // BUILD UI
+  // UI
   // -----------------------
   @override
   Widget build(BuildContext context) {
@@ -131,40 +159,38 @@ class _DiscoverPageState extends State<DiscoverPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              const SizedBox(height: 40),
-              Text(
-                'Discover',
-                style: GoogleFonts.afacad(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 24),
+                  const SizedBox(height: 40),
+                  Text(
+                    'Discover',
+                    style: GoogleFonts.afacad(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-              // Search Bar
-              SearchingBar(
-                controller: searchController,
-                onChanged: _onSearchChanged,
-              ),
+                  // Search bar
+                  SearchingBar(
+                    controller: searchController,
+                    onChanged: _onSearchChanged,
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 10),
 
-            // Categories only visible when not searching
             if (!isSearchMode)
               HorizontalScrolling_Categories(
                 onCategoryChanged: _fetchCategoryMovies,
               ),
 
-            if (!isSearchMode) const SizedBox(height: 10),
+            const SizedBox(height: 10),
 
-            // Main content area
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child:
-                    isSearchMode ? _buildSearchResults() : _buildCategoryView(),
+                isSearchMode ? _buildSearchResults() : _buildCategoryView(),
               ),
             ),
           ],
@@ -173,21 +199,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  // -----------------------
-  // SEARCH RESULTS VIEW
-  // -----------------------
   Widget _buildSearchResults() {
     if (isLoadingSearch) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (searchResults.isEmpty) {
-      return Center(
-        child: Text(
-          "No movies found",
-          style: GoogleFonts.afacad(fontSize: 18),
-        ),
-      );
+      return const Center(child: Text("No movies found"));
     }
 
     return SingleChildScrollView(
@@ -195,24 +213,25 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  // -----------------------
-  // CATEGORY VIEW
-  // -----------------------
   Widget _buildCategoryView() {
-    return RefreshIndicator(
-      onRefresh: () async => _fetchCategoryMovies(null),
-      child: isLoadingCategory
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.only(top: 10),
-              children: [
-                VerticalMovieGrid(
-                  movies: categoryMovies,
-                  allowSelection: true,
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
+    if (isLoadingCategory && categoryMovies.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ListView(
+      controller: _scrollController,
+      children: [
+        VerticalMovieGrid(
+          movies: categoryMovies,
+          allowSelection: true,
+        ),
+        if (isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        const SizedBox(height: 40),
+      ],
     );
   }
 }

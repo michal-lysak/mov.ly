@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/ri.dart';
+import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
@@ -12,11 +13,13 @@ import 'package:shimmer/shimmer.dart';
 import '../../data/models/movie.dart';
 import '../../data/cache/backdrop_cache.dart';
 import '../widgets/horizontal-posters-scrolling.dart';
+import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onOpenLiked;
+  final UserService userService;
 
-  const HomeTab({super.key, required this.onOpenLiked});
+  const HomeTab({super.key, required this.onOpenLiked, required this.userService});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -277,6 +280,7 @@ Widget _shimmerCard(double width, double height) {
                           valueListenable: _activeIndexNotifier,
                           builder: (context, activeIndex, child) {
                             return MovieCard(
+                              userService: widget.userService,
                               movie: movie,
                               width: cardWidth,
                               height: cardHeight,
@@ -330,151 +334,3 @@ Widget _shimmerCard(double width, double height) {
   }
 }
 
-
-
-
-class MovieCard extends StatelessWidget {
-  const MovieCard({
-    super.key,
-    required this.movie,
-    required this.width,
-    required this.height,
-    this.isActive = false,
-    this.onTap,
-  });
-
-  final Movie movie;
-  final double width;
-  final double height;
-  final bool isActive;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final double scale = isActive ? 1.0 : 0.87;
-    final double titleFontSize = (height * 0.10).clamp(18.0, 28.0);
-    final double metaFontSize = (height * 0.072).clamp(12.0, 18.0);
-
-    return AnimatedScale(
-      scale: scale,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOut,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: width,
-          height: height,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Backdrop
-              CachedBackdropImage.fromMovie(movie),
-
-              // Fade
-              Positioned(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.82),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Content
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      movie.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.bebasNeue(
-                        height: 0.9,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[900],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          child: Text(
-                            movie.releaseDate.isNotEmpty
-                                ? movie.releaseDate.split('-').first
-                                : "N/A",
-                            style: GoogleFonts.afacad(
-                              fontSize: metaFontSize,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "·",
-                          style: GoogleFonts.afacad(
-                            fontSize: metaFontSize,
-                            color: Colors.grey[300],
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Categories List
-                        Row(
-                          children: movie.categories.take(3).map((cat) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: SizedBox(
-                                width: 60,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[800],
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  child: Text(
-                                    cat,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.afacad(
-                                      fontSize: metaFontSize,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        )
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
