@@ -16,6 +16,12 @@ class UserService {
   FirebaseFirestore.instance.collection('usernames');
 
   late Box followingBox;
+// rebuild favMovies of followings in cache
+  void rebuildMovieLookup() {
+    final users = getFollowingListFromCache();
+    _movieToUsersMap = buildMovieToUsersMap(users);
+  }
+
 
   StreamSubscription<QuerySnapshot>? _followingSub;
 
@@ -33,12 +39,9 @@ class UserService {
     }
   }
 
-
-
-
-
-
   final TMDBService _tmdb = TMDBService();
+  Map<int, List<FollowedUser>>? _movieToUsersMap;
+
 
   /// Creates a new user document
   Future<void> createUser(String userId, {
@@ -255,7 +258,7 @@ class UserService {
         'name': targetData?['name'] ?? theirUsername,
         'favMovies': favMoviesList,
       });
-
+      rebuildMovieLookup();
       debugPrint('Follow successful: Both Firestore and Hive updated.');
     } catch (e) {
       debugPrint('Error during follow process: $e');
@@ -278,6 +281,7 @@ class UserService {
       // 3. Remove from my following
       await _usernamesCollection.doc(myUsername).collection('following').doc(theirUserId).delete();
 
+      rebuildMovieLookup();
     } catch (e) {
       debugPrint('Error unfollowing: $e');
       // Revert if failed
@@ -387,6 +391,27 @@ class UserService {
       return null;
     }).whereType<FollowedUser>().toList();
   }
+
+  Map<int, List<FollowedUser>> buildMovieToUsersMap(List<FollowedUser> users) {
+    final Map<int, List<FollowedUser>> map = {};
+
+    for (var user in users) {
+      for (var movieId in user.favMovieIds) {
+        map.putIfAbsent(movieId, () => []).add(user);
+      }
+    }
+
+    return map;
+  }
+
+
+  List<FollowedUser> usersWhoFavorited(int movieId) {
+    return _movieToUsersMap?[movieId] ?? [];
+  }
+
+
+
+
 
 
 
