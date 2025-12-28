@@ -19,9 +19,9 @@ class FollowedUser {
       username: data['username'] ?? '',
       name: data['name'] ?? '',
       photoUrl: data['photoUrl'] ?? '',
-      favMovieIds: List<int>.from(
-        (data['favMovies'] ?? []).map((m) => m['id']),
-      ),
+      favMovieIds: (data['favMovies'] as List<dynamic>? ?? [])
+          .map((m) => (m['id'] as num).toInt())
+          .toList(),
     );
   }
 
