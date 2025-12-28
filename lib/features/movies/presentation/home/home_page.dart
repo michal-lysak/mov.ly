@@ -94,7 +94,9 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     }
 
     final pages = [
-      HomeTab(onOpenLiked: _openLikedMovies),
+      HomeTab(
+          userService: widget.userService,
+          onOpenLiked: _openLikedMovies),
       const DiscoverPage(),
       _currentProfileTab ??
           SocialTab(
