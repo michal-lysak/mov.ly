@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../../movies/data/models/movie.dart';
-import '../../../movies/data/services/tmdb_service.dart';
+
+import '../../../../../movies/data/models/movie.dart';
+import '../../../../../movies/data/services/tmdb_service.dart';
 
 class FavoriteService {
   final _db = FirebaseFirestore.instance;
@@ -114,5 +115,28 @@ class FavoriteService {
 
     // Filter out nulls (in case fetching fails)
     return movies.whereType<Movie>().toList();
+  }Future<List<int>> fetchFavoriteMovieIds(String userId) async {
+    try {
+      final userRef = _db.collection('favoritesperuser').doc(userId);
+      final snap = await userRef.get();
+
+      if (!snap.exists || snap.data() == null) return [];
+
+      final data = snap.data()!;
+      if (!data.containsKey(_favoriteListName)) return [];
+
+      final favorites = List<Map<dynamic, dynamic>>.from(data[_favoriteListName]);
+
+      // Extract just the integer IDs
+      return favorites
+          .map((f) => f['id'] as int?)
+          .whereType<int>()
+          .toList();
+    } catch (e) {
+      debugPrint("Error fetching fav IDs for $userId: $e");
+      return [];
+    }
   }
+
+
 }
