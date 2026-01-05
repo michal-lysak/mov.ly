@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
-import 'package:movly/features/auth/data/profile_picture_service.dart';
+import '../../data/firestore_cloud/user_service.dart';
+import '../../data/profile_picture_service.dart';
 import '../components/my_textfield.dart';
 
 class SignupUsernamePage extends StatefulWidget {

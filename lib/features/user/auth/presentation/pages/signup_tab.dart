@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Note: Assuming these imports exist in your project structure
-import 'package:movly/features/auth/data/firebase_auth_repo.dart';
-import 'package:movly/features/auth/presentation/components/my_button.dart';
-import 'package:movly/features/auth/presentation/components/my_textfield.dart';
+
+import '../../data/firebase_auth_repo.dart';
+import '../components/my_button.dart';
+import '../components/my_textfield.dart';
 
 class SignupPage extends StatefulWidget {
   // Callback function provided by the parent (LoginOrRegister) to switch to login view

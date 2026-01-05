@@ -15,7 +15,7 @@ class CachedBackdropImage extends StatelessWidget {
     this.fit = BoxFit.cover,
   });
 
-  /// Create directly from Movie model — uses **backdropUrl**
+  /// Create directly from Movie models — uses **backdropUrl**
   factory CachedBackdropImage.fromMovie(Movie movie) {
     return CachedBackdropImage(imageUrl: movie.backdropUrl);
   }

@@ -4,10 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/ri.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/data/cache/poster_cache.dart';
+
+import '../../social/data/favorites/data/services/favorite_service.dart';
 
 class PreHomePage extends StatefulWidget {
   const PreHomePage({super.key});

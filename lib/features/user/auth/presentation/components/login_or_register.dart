@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:movly/features/auth/presentation/pages/login_page.dart';
-import 'package:movly/features/auth/presentation/pages/signup_tab.dart'; // Make sure this import path is correct
 
+import '../pages/login_page.dart';
+import '../pages/signup_tab.dart';
 class LoginOrRegister extends StatefulWidget {
   const LoginOrRegister({super.key});
 

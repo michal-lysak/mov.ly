@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Added for profile check
-import 'package:movly/features/auth/presentation/components/login_or_register.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'login_or_register.dart'; // Added for profile check
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

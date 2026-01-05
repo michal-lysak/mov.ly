@@ -1,10 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:movly/features/auth/data/firebase_auth_repo.dart';
-import 'package:movly/features/auth/presentation/components/google_sign_in_button.dart';
-import 'package:movly/features/auth/presentation/components/my_button.dart';
-import 'package:movly/features/auth/presentation/components/my_textfield.dart';
+
+import '../../data/firebase_auth_repo.dart';
+import '../components/google_sign_in_button.dart';
+import '../components/my_button.dart';
+import '../components/my_textfield.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function()? onRegisterTap;

@@ -4,7 +4,7 @@ Auth States
 
 */
 
-import 'package:movly/features/auth/domain/entities/app_user.dart';
+import '../../domain/entities/app_user.dart';
 
 abstract class AuthState {}
 
