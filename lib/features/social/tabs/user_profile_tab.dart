@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
-import '../../../auth/data/firestore_cloud/user_service.dart';
-import '../../data/models/movie.dart';
-import '../widgets/vertical_movies_grid.dart';
+import '../../movies/data/models/movie.dart';
+import '../../movies/presentation/widgets/vertical_movies_grid.dart';
+import '../../user/auth/data/firestore_cloud/user_service.dart';
+import '../data/favorites/data/services/favorite_service.dart';
+import '../data/favorites/data/services/socialprofile_service.dart';
 /*
   NOTE:
   This is the user profile tab, it displays the user's name, username, and their favorite movies.
@@ -25,7 +26,7 @@ class UserProfileTab extends StatefulWidget {
 }
 
 class _UserProfileTabState extends State<UserProfileTab> {
-  final _userService = UserService();
+  final _socialprofileService = SocialProfileService();
   final _favService = FavoriteService();
 
   Map<String, dynamic>? _profile;
@@ -40,7 +41,7 @@ class _UserProfileTabState extends State<UserProfileTab> {
 
   Future<void> _loadProfile() async {
     try {
-      final profile = await _userService.getUserProfileByUsername(widget.username);
+      final profile = await _socialprofileService.getProfileByUsername(widget.username);
 
       if (profile == null) {
         if (mounted) {
