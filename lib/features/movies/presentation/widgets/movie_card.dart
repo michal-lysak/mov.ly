@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
+import 'package:provider/provider.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
-
+import '../../../social/social_cache.dart';
 import '../../data/cache/backdrop_cache.dart';
 
 class MovieCard extends StatelessWidget {
@@ -12,7 +11,6 @@ class MovieCard extends StatelessWidget {
     required this.movie,
     required this.width,
     required this.height,
-    required this.userService,
     this.isActive = false,
     this.onTap,
   });
@@ -22,13 +20,10 @@ class MovieCard extends StatelessWidget {
   final double height;
   final bool isActive;
   final VoidCallback? onTap;
-  final UserService userService;
 
   @override
   Widget build(BuildContext context) {
-    // Adjusted scale factors for a punchier active state
     final double scale = isActive ? 1.0 : 0.9;
-    // Responsive font sizing
     final double titleFontSize = (height * 1).clamp(20.0, 36.0);
     final double metaFontSize = (height * 0.05).clamp(12.0, 15.0);
     const double cardBorderRadius = 16.0;
@@ -36,13 +31,12 @@ class MovieCard extends StatelessWidget {
     return AnimatedScale(
       scale: scale,
       duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic, // Smoother curve
+      curve: Curves.easeOutCubic,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
           width: width,
           height: height,
-          // Add shadow for depth
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(cardBorderRadius),
             boxShadow: [
@@ -53,7 +47,6 @@ class MovieCard extends StatelessWidget {
               ),
             ],
           ),
-          // Use ClipRRect here so the shadow isn't clipped by the container decoration
           child: ClipRRect(
             borderRadius: BorderRadius.circular(cardBorderRadius),
             child: Stack(
@@ -62,7 +55,7 @@ class MovieCard extends StatelessWidget {
                 // 1. The Image
                 CachedBackdropImage.fromMovie(movie),
 
-                // 2. The Gradient Overlay (Better readability)
+                // 2. The Gradient Overlay
                 const Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -72,7 +65,7 @@ class MovieCard extends StatelessWidget {
                         stops: [0.3, 0.95],
                         colors: [
                           Colors.transparent,
-                          Colors.black, // Solid black at bottom for text safety
+                          Colors.black,
                         ],
                       ),
                     ),
@@ -84,11 +77,9 @@ class MovieCard extends StatelessWidget {
                   top: 12,
                   left: 12,
                   right: 12,
-                  child: ValueListenableBuilder(
-                    valueListenable: userService.followingBox.listenable(),
-                    builder: (context, Box box, _) {
-                      userService.rebuildMovieLookup();
-                      final users = userService.usersWhoFavorited(movie.id);
+                  child: Consumer<SocialCache>(
+                    builder: (context, socialCache, _) {
+                      final users = socialCache.usersWhoFavorited(movie.id);
 
                       if (users.isEmpty) return const SizedBox.shrink();
 
@@ -100,18 +91,19 @@ class MovieCard extends StatelessWidget {
                           // Overlapping Avatar Stack
                           SizedBox(
                             height: 30,
-                            // Calculate width based on how many items overlap
                             width: 30.0 + (displayUsers.length - 1) * 18.0,
                             child: Stack(
                               children: List.generate(displayUsers.length, (index) {
                                 final user = displayUsers[index];
                                 return Positioned(
-                                  left: index * 18.0, // The overlap magic
+                                  left: index * 18.0,
                                   child: Container(
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                          color: Colors.black, width: 2), // White border defines separation
+                                        color: Colors.black,
+                                        width: 2,
+                                      ),
                                     ),
                                     child: CircleAvatar(
                                       radius: 13,
@@ -125,9 +117,10 @@ class MovieCard extends StatelessWidget {
                                             ? user.username[0].toUpperCase()
                                             : '?',
                                         style: GoogleFonts.afacad(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold),
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       )
                                           : null,
                                     ),
@@ -144,7 +137,12 @@ class MovieCard extends StatelessWidget {
                                 fontSize: metaFontSize,
                                 color: Colors.white.withOpacity(0.9),
                                 fontWeight: FontWeight.w600,
-                                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black,
+                                    blurRadius: 4,
+                                  )
+                                ],
                               ),
                             ),
                           ],
@@ -169,42 +167,23 @@ class MovieCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.bebasNeue(
-                            fontWeight: FontWeight.w600,
-                            height: 0.95,
-                            fontSize: titleFontSize,
-                            color: Colors.white,
-                            shadows: [Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 8, offset: Offset(0,2))]
+                          fontWeight: FontWeight.w600,
+                          height: 0.95,
+                          fontSize: titleFontSize,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.8),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
                         ),
                       ),
                       const SizedBox(height: 6),
 
-                      // Metadata Row (Clean text separated by dots)
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 6, // horizontal gap between items
-                        runSpacing: 4, // gap between lines if it wraps
-                        children: [
-                          // Year
-                          _buildMetaText(
-                              movie.releaseDate.isNotEmpty
-                                  ? movie.releaseDate.split('-').first
-                                  : "N/A",
-                              metaFontSize),
-
-                          // Separator
-                          _buildMetaSeparator(metaFontSize),
-
-                          // Genres (joined by dots)
-                          ...movie.categories.take(3).expand((cat) {
-                            // Add separator before every genre except the very first item in the whole Wrap
-                            final isFirstGenre = movie.categories.indexOf(cat) == 0;
-                            return [
-                              if (!isFirstGenre) _buildMetaSeparator(metaFontSize),
-                              _buildMetaText(cat, metaFontSize),
-                            ];
-                          }),
-                        ],
-                      ),
+                      // Metadata Row
+                      _buildMetaRow(metaFontSize),
                     ],
                   ),
                 ),
@@ -213,6 +192,35 @@ class MovieCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMetaRow(double fontSize) {
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        // Year
+        _buildMetaText(
+          movie.releaseDate.isNotEmpty
+              ? movie.releaseDate.split('-').first
+              : "N/A",
+          fontSize,
+        ),
+
+        // Separator
+        _buildMetaSeparator(fontSize),
+
+        // Genres (joined by dots)
+        ...movie.categories.take(3).expand((cat) {
+          final isFirstGenre = movie.categories.indexOf(cat) == 0;
+          return [
+            if (!isFirstGenre) _buildMetaSeparator(fontSize),
+            _buildMetaText(cat, fontSize),
+          ];
+        }),
+      ],
     );
   }
 
@@ -231,7 +239,7 @@ class MovieCard extends StatelessWidget {
     return Text(
       "·",
       style: GoogleFonts.afacad(
-        fontSize: fontSize * 1.2, // Slightly larger dot
+        fontSize: fontSize * 1.2,
         color: Colors.grey[500],
         fontWeight: FontWeight.bold,
       ),
