@@ -1,8 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
-import 'data/favorites/data/models/followed_user.dart';
-import 'data/favorites/data/services/favorite_service.dart';
-import 'data/favorites/data/services/follow_service.dart';
+import '../models/followed_user.dart';
+import '../services/favorite_service.dart';
+import '../services/follow_service.dart';
 
 class SocialCache extends ChangeNotifier {
   final Box followingBox;
@@ -36,7 +36,7 @@ class SocialCache extends ChangeNotifier {
     followingBox.put(uid, {
       'username': username,
       'name': name.isNotEmpty ? name : username,
-      'photoUrl': '',
+      'photoUrl': photoUrl,
       'favMovies': []
     });
     rebuild();
@@ -89,15 +89,22 @@ class SocialCache extends ChangeNotifier {
       final followingList = await followService.fetchInitialFollowing(myUsername);
       debugPrint("Found ${followingList.length} friends.");
 
+      // Inside SocialCache.dart -> syncFriendsData method
       final futures = followingList.map((userData) async {
         final String uid = userData['uid'];
         final favIds = await favoriteService.fetchFavoriteMovieIds(uid);
+
+        // Ensure we are getting the photoUrl correctly
+        String? rawUrl = userData['photoUrl']?.toString();
+
+        // LOG THIS: See if Firestore actually has the URLs
+        debugPrint("Syncing User: ${userData['username']}, URL from Firestore: $rawUrl");
 
         return {
           'uid': uid,
           'username': userData['username'] ?? '',
           'name': userData['displayName'] ?? userData['username'] ?? '',
-          'photoUrl': userData['photoUrl'] ?? '',
+          'photoUrl': (rawUrl != null && rawUrl.isNotEmpty) ? rawUrl : '',
           'favMovies': favIds.map((id) => {'id': id}).toList(),
         };
       }).toList();

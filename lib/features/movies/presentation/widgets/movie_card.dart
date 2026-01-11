@@ -1,8 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:movly/features/movies/data/models/movie.dart';
-import '../../../social/social_cache.dart';
+import '../../../social/data/favorites/data/cache/social_cache.dart';
 import '../../data/cache/backdrop_cache.dart';
 
 class MovieCard extends StatelessWidget {
@@ -95,6 +96,8 @@ class MovieCard extends StatelessWidget {
                             child: Stack(
                               children: List.generate(displayUsers.length, (index) {
                                 final user = displayUsers[index];
+                                // Inside the builder loop
+                                print("DEBUG PFP: User: ${user.username}, URL: '${user.photoUrl}'"); // <--- Add this
                                 return Positioned(
                                   left: index * 18.0,
                                   child: Container(
@@ -109,7 +112,7 @@ class MovieCard extends StatelessWidget {
                                       radius: 13,
                                       backgroundColor: Colors.grey[800],
                                       backgroundImage: user.photoUrl.isNotEmpty
-                                          ? NetworkImage(user.photoUrl)
+                                          ? CachedNetworkImageProvider(user.photoUrl)
                                           : null,
                                       child: user.photoUrl.isEmpty
                                           ? Text(
