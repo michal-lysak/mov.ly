@@ -88,7 +88,7 @@ class _PersonalLikedMoviesState extends State<PersonalLikedMovies> {
       backgroundColor: Theme.of(context).primaryColor,
       appBar: AppBar(
         title: Text('Liked Movies', style: GoogleFonts.afacad()),
-        shadowColor: Colors.blue,
+        shadowColor: Theme.of(context).primaryColor,
         // Default back button is used automatically
       ),
       body: GridView.builder(
