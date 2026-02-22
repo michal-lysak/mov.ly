@@ -87,7 +87,7 @@ class Movie {
       releaseDate: json['release_date'] ?? 'Unknown',
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
       categories: genres,
-      productionCompanies: companies, // typed correctly
+      productionCompanies: companies,
     );
   }
 
