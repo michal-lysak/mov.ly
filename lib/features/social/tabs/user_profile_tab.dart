@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../movies/data/models/movie.dart';
 import '../../movies/presentation/widgets/vertical_movies_grid.dart';
-import '../../user/auth/data/firestore_cloud/user_service.dart';
+
 import '../data/favorites/data/services/favorite_service.dart';
 import '../data/favorites/data/services/socialprofile_service.dart';
+import '../data/favorites/data/services/follow_service.dart';
+
 /*
   NOTE:
   This is the user profile tab, it displays the user's name, username, and their favorite movies.
@@ -13,12 +20,14 @@ import '../data/favorites/data/services/socialprofile_service.dart';
 */
 class UserProfileTab extends StatefulWidget {
   final String username;
+  final String currentUserUsername;
   final VoidCallback onBack;
 
   const UserProfileTab({
     super.key,
     required this.username,
-    required this.onBack
+    required this.currentUserUsername,
+    required this.onBack,
   });
 
   @override
@@ -32,6 +41,9 @@ class _UserProfileTabState extends State<UserProfileTab> {
   Map<String, dynamic>? _profile;
   List<Movie?> _favorites = [];
   bool _isLoading = true;
+
+  String? _profileUid;
+  bool _isSelf = false;
 
   @override
   void initState() {
@@ -57,9 +69,14 @@ class _UserProfileTabState extends State<UserProfileTab> {
       final uid = profile['uid'] as String;
       final favorites = await _favService.fetchFavoriteMovies(uid);
 
+      final myUid = FirebaseAuth.instance.currentUser?.uid;
+      final isSelf = (myUid != null && myUid == uid);
+
       if (mounted) {
         setState(() {
           _profile = profile;
+          _profileUid = uid;
+          _isSelf = isSelf;
           _favorites = favorites;
           _isLoading = false;
         });
@@ -78,6 +95,8 @@ class _UserProfileTabState extends State<UserProfileTab> {
 
   @override
   Widget build(BuildContext context) {
+    final followService = Provider.of<FollowService>(context, listen: false);
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -106,11 +125,13 @@ class _UserProfileTabState extends State<UserProfileTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.person_off, size: 50, color: Colors.grey),
+                      const Icon(Icons.person_off,
+                          size: 50, color: Colors.grey),
                       const SizedBox(height: 12),
                       Text(
                         "User not found",
-                        style: GoogleFonts.afacad(fontSize: 20, color: Colors.grey),
+                        style: GoogleFonts.afacad(
+                            fontSize: 20, color: Colors.grey),
                       ),
                       const SizedBox(height: 100),
                     ],
@@ -119,38 +140,116 @@ class _UserProfileTabState extends State<UserProfileTab> {
                     : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 30),
+                    const SizedBox(height: 30),
                     Center(
                       child: Column(
                         children: [
                           CircleAvatar(
                             radius: 50,
-                            backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-                            backgroundImage: _profile!['photoUrl'] != null
-                                ? NetworkImage(_profile!['photoUrl']!)
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.3),
+                            backgroundImage:
+                            (_profile!['photoUrl'] != null &&
+                                (_profile!['photoUrl'] as String)
+                                    .isNotEmpty)
+                                ? NetworkImage(_profile!['photoUrl'])
+                                : null,
+                            // fallback icon when no photo
+                            child: (_profile!['photoUrl'] == null ||
+                                (_profile!['photoUrl'] as String)
+                                    .isEmpty)
+                                ? const Icon(Icons.person, size: 40)
                                 : null,
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
                             _profile!['name'] ?? "Unknown",
                             style: GoogleFonts.afacad(
                               fontSize: 36,
                               fontWeight: FontWeight.w600,
-
+                            ),
+                          ),
+                          Text(
+                            '@${_profile!['username'] ?? "unknown"}',
+                            style: GoogleFonts.afacad(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w300,
                             ),
                           ),
 
-                      Text(
-                        "@" + _profile!['username'] ?? "Unknown",
-                        style: GoogleFonts.afacad(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
+                          // Follow button (hidden on your own profile)
+                          if (!_isSelf && _profileUid != null) ...[
+                            const SizedBox(height: 14),
+                            ValueListenableBuilder(
+                              valueListenable: Hive.box('followingBox')
+                                  .listenable(),
+                              builder: (context, Box box, child) {
+                                final bool isFollowing =
+                                box.containsKey(_profileUid);
+
+                                return GestureDetector(
+                                  onTap: () async {
+                                    final myUid = FirebaseAuth
+                                        .instance.currentUser!.uid;
+
+                                    final theirUid = _profileUid!;
+                                    final theirUsername =
+                                        _profile!['username'] ??
+                                            widget.username;
+
+                                    if (isFollowing) {
+                                      await followService.unfollow(
+                                        myUid: myUid,
+                                        myUsername:
+                                        widget.currentUserUsername,
+                                        theirUid: theirUid,
+                                        theirUsername: theirUsername,
+                                      );
+                                    } else {
+                                      await followService.follow(
+                                        myUid: myUid,
+                                        myUsername:
+                                        widget.currentUserUsername,
+                                        theirUid: theirUid,
+                                        theirUsername: theirUsername,
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    height: 34,
+                                    width: 110,
+                                    decoration: BoxDecoration(
+                                      borderRadius:
+                                      BorderRadius.circular(12),
+                                      color: isFollowing
+                                          ? Colors.grey[700]
+                                          : Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        isFollowing
+                                            ? 'Following'
+                                            : 'Follow',
+                                        style: GoogleFonts.afacad(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     Center(
                       child: Text(
                         "Favorite Movies",
@@ -161,9 +260,9 @@ class _UserProfileTabState extends State<UserProfileTab> {
                       ),
                     ),
                     const SizedBox(height: 8),
-
                     _favorites.isEmpty
-                        ? const Center(child: Text("No favorite movies"))
+                        ? const Center(
+                        child: Text("No favorite movies"))
                         : VerticalMovieGrid(
                       movies: _favorites.whereType<Movie>().toList(),
                     ),
