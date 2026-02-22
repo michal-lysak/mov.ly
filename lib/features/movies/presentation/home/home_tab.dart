@@ -1,3 +1,4 @@
+// home_tab.dart (your HomeTab file) — full file with the fixed generation logic
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,7 +37,7 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
   List<Movie> _forYouMovies = [];
 
   @override
-  bool get wantKeepAlive => true; // Fixed typo from 'wantToKeepAlive'
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -73,7 +74,8 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
           .collection('foryoupagelist');
 
       final querySnapshot = await subcollectionRef.get();
-      ids = querySnapshot.docs.map((doc) => doc.id).toList();
+      // safer: read stored 'id' field (works even if doc IDs change later)
+      ids = querySnapshot.docs.map((doc) => doc.data()['id'].toString()).toList();
     } catch (e) {
       debugPrint("Error fetching IDs: $e");
     }
@@ -89,20 +91,27 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
     if (_isGenerating) return;
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDoc = await userRef.get();
 
       final alreadyGenerated = userDoc.data()?['forYouGenerated'] == true;
       if (alreadyGenerated) return;
 
       if (mounted) setState(() => _isGenerating = true);
-      await _forYouService.generateForYouMovies(user.uid);
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'forYouGenerated': true});
+
+
+      final didGenerate = await _forYouService.generateForYouMovies(user.uid);
+
+      if (didGenerate) {
+        // use set + merge so it never fails if the user doc didn't exist yet
+        await userRef.set({'forYouGenerated': true}, SetOptions(merge: true));
+      } else {
+        // optional: helps you debug in Firestore
+        await userRef.set({
+          'forYouGenerated': false,
+          'forYouReason': 'not_generated_yet',
+        }, SetOptions(merge: true));
+      }
     } catch (e) {
       debugPrint("Error generating: $e");
     } finally {
@@ -155,7 +164,12 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                 final page = _pageController.page ?? 0.0;
                 scale = (1 - (page - index).abs() * 0.15).clamp(0.85, 1.0);
               }
-              return Center(child: Transform.scale(scale: scale, child: _shimmerCard(cardWidth, cardHeight)));
+              return Center(
+                child: Transform.scale(
+                  scale: scale,
+                  child: _shimmerCard(cardWidth, cardHeight),
+                ),
+              );
             },
           );
         },
@@ -165,10 +179,12 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
 
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const Scaffold(body: Center(child: Text("Please log in")));
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text("Please log in")));
+    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = screenWidth * 0.8;
@@ -186,16 +202,24 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: Row(
                   children: [
-                    Text('Home', style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Home',
+                      style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600),
+                    ),
                     const Spacer(),
                     GestureDetector(
                       onTap: widget.onOpenLiked,
-                      child: Iconify(Ri.heart_fill, color: Theme.of(context).colorScheme.primary, size: 24),
+                      child: Iconify(
+                        Ri.heart_fill,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
                     )
                   ],
                 ),
               ),
               const SizedBox(height: 20),
+
               if (_isLoading || _isGenerating)
                 buildForYouShimmer(cardWidth: cardWidth, cardHeight: cardHeight)
               else if (_forYouMovies.isEmpty)
@@ -204,8 +228,11 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
-                      child: Text("Add some favorites to get recommendations!",
-                          style: GoogleFonts.afacad(fontSize: 16), textAlign: TextAlign.center),
+                      child: Text(
+                        "Add some favorites to get recommendations!",
+                        style: GoogleFonts.afacad(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 )
