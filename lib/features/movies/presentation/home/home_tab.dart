@@ -94,8 +94,8 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
       final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final userDoc = await userRef.get();
 
-      final alreadyGenerated = userDoc.data()?['forYouGenerated'] == true;
-      if (alreadyGenerated) return;
+      await _forYouService.generateForYouMovies(user.uid);
+
 
       if (mounted) setState(() => _isGenerating = true);
 
@@ -108,8 +108,7 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
       } else {
         // optional: helps you debug in Firestore
         await userRef.set({
-          'forYouGenerated': false,
-          'forYouReason': 'not_generated_yet',
+          'forYouGenerated': false,,
         }, SetOptions(merge: true));
       }
     } catch (e) {
