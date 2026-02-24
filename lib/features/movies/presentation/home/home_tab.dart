@@ -108,7 +108,7 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
       } else {
         // optional: helps you debug in Firestore
         await userRef.set({
-          'forYouGenerated': false,,
+          'forYouGenerated': false,
         }, SetOptions(merge: true));
       }
     } catch (e) {
