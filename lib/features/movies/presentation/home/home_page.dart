@@ -14,7 +14,7 @@ import '../../../user/auth/data/firestore_cloud/user_service.dart';
 import '../discover/discover_tab.dart';
 import '../widgets/navbar_btn.dart';
 import 'home_tab.dart';
-import 'personal_liked_movies_page.dart';
+import '../account/account-options_tab.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
