@@ -84,21 +84,47 @@ class FavoriteService {
 
   Future<List<Movie?>> fetchFavoriteMovies(String userId) async {
     debugPrint("favMovies: $userId");
-    final userRef = _db.collection('favoritesperuser').doc(userId);
-    final snap = await userRef.get();
 
-    if (!snap.exists || snap.data()?[_favoriteListName] == null) return [];
+    try {
+      // Check privacy setting
+      final userSnap = await _db.collection('users').doc(userId).get();
 
-    final favorites = List<Map<String, dynamic>>.from(snap.data()?[_favoriteListName]);
-    final movieIds = favorites.map((f) => f['id'] as int).toList();
+      if (!userSnap.exists) return [];
 
-    // Fetch all movies in parallel for faster loading
-    final movies = await Future.wait(
-        movieIds.map((id) => _tmdb.fetchMovieById(id))
-    );
+      final isPublic = userSnap.data()?['isPublic'];
 
-    return movies;
+      if (isPublic != true) {
+        // Favorites are private
+        return [];
+      }
+
+      // Fetch favorites
+      final favSnap =
+      await _db.collection('favoritesperuser').doc(userId).get();
+
+      if (!favSnap.exists ||
+          favSnap.data()?[_favoriteListName] == null) {
+        return [];
+      }
+
+      final favorites =
+      List<Map<String, dynamic>>.from(favSnap.data()?[_favoriteListName]);
+
+      final movieIds =
+      favorites.map((f) => f['id'] as int).toList();
+
+      // Fetch all movies in parallel
+      final movies = await Future.wait(
+        movieIds.map((id) => _tmdb.fetchMovieById(id)),
+      );
+
+      return movies;
+    } catch (e) {
+      debugPrint("Error fetching favorites: $e");
+      return [];
+    }
   }
+
 
   Future<List<Movie>> fetchTopFavoriteMovies() async {
     final querySnapshot = await _db
