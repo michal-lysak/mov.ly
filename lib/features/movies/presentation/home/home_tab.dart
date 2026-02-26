@@ -208,12 +208,39 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                     const Spacer(),
                     GestureDetector(
                       onTap: widget.onOpenLiked,
-                      child: Iconify(
-                        Ri.heart_fill,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 24,
+                      child: StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          String? photoUrl;
+
+                          if (snapshot.hasData && snapshot.data!.exists) {
+                            final data = snapshot.data!.data() as Map<String, dynamic>;
+                            photoUrl = data['photoUrl'];
+                          }
+
+                          return CircleAvatar(
+                            radius: 15,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundImage:
+                            photoUrl != null && photoUrl.isNotEmpty
+                                ? NetworkImage(photoUrl)
+                                : null,
+                            child: photoUrl == null || photoUrl.isEmpty
+                                ? Icon(
+                              Icons.person,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.surface,
+                            )
+                                : null,
+                          );
+                        },
                       ),
-                    )
+
+                    ),
+
                   ],
                 ),
               ),
@@ -267,7 +294,7 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                 ),
               const SizedBox(height: 20),
               MovieCarousel(
-                title: 'People love the most',
+                title: 'Most loved movies',
                 sectionKey: 'top_favorites',
                 moviesFuture: _favoriteService.fetchTopFavoriteMovies(),
               ),
