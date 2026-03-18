@@ -87,7 +87,7 @@ class FavoriteService {
 
     try {
       // Check privacy setting
-      final userSnap = await _db.collection('users').doc(userId).get();
+      final userSnap = await _db.collection('favoritesperuser').doc(userId).get();
 
       if (!userSnap.exists) return [];
 
