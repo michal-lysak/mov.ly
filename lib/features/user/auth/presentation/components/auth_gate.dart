@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../../movies/presentation/home/home_page.dart';
+import '../../../../movies/presentation/liking_titles.dart';
+import '../pages/signup_username_page.dart';
 import 'login_or_register.dart'; // Added for profile check
 
 class AuthGate extends StatelessWidget {
@@ -44,48 +47,49 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          // Show a loading circle while checking the auth state
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
 
-          // User is NOT logged in
-          if (!snapshot.hasData) {
-            return const LoginOrRegister();
-          }
-
-          // User IS logged in (has data)
-          final user = snapshot.data!;
-
-          // Use FutureBuilder to wait for the profile completion check
-          return FutureBuilder<String>(
-            future: _getDestinationRoute(user.uid),
-            builder: (context, profileSnapshot) {
-
-              // Show loading while checking profile status
-              if (profileSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              // The check is complete. Use the determined route.
-              final String nextRoute = profileSnapshot.data ?? '/preHome'; // Default to /home if null
-
-              // Perform navigation after the frame is built
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                // Navigate to the determined destination: /username, /preHome, or /home
-                Navigator.of(context).pushReplacementNamed(nextRoute);
-              });
-
-              // Return a blank container while navigation occurs
-              return const SizedBox.shrink();
-            },
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
-        },
-      ),
+        }
+
+        // Not logged in
+        if (!snapshot.hasData) {
+          return const LoginOrRegister();
+        }
+
+        // Logged in
+        final user = snapshot.data!;
+
+        return FutureBuilder<String>(
+          future: _getDestinationRoute(user.uid),
+          builder: (context, profileSnapshot) {
+
+            if (profileSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final route = profileSnapshot.data ?? '/home';
+
+            switch (route) {
+              case '/username':
+                return const SignupUsernamePage();
+              case '/preHome':
+                return const PreHomePage();
+              case '/home':
+              default:
+                return const HomePage();
+            }
+          },
+        );
+      },
     );
   }
+
 }
