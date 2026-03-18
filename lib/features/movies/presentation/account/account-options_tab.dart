@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:movly/features/movies/presentation/account/profile-settings_tab.dart';
 import 'package:movly/features/user/auth/data/firebase_auth_repo.dart';
+
+import '../../../user/auth/data/firestore_cloud/user_service.dart';
 
 class PersonalLikedMovies extends StatefulWidget {
   final String userId;
@@ -18,6 +21,7 @@ class PersonalLikedMovies extends StatefulWidget {
 }
 
 class _PersonalLikedMoviesState extends State<PersonalLikedMovies> {
+  final UserService _userService = UserService();
   bool _isPublicFavorites = true;
 
   @override
@@ -89,27 +93,53 @@ class _PersonalLikedMoviesState extends State<PersonalLikedMovies> {
           /// ---------------- PROFILE SETTINGS ----------------
           _buildSection(
             context,
-            child: GestureDetector(
-              child: ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: Text(
-                  'Profile settings',
-                  style: GoogleFonts.afacad(fontSize: 18),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EditProfileScreen(),
-                    ),
-                  );
-                },
+            child: StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(widget.userId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                String? photoUrl;
 
-              ),
-              //TODO: onTap
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  photoUrl = data['photoUrl'];
+                }
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundImage:
+                    photoUrl != null && photoUrl.isNotEmpty
+                        ? NetworkImage(photoUrl)
+                        : null,
+                    child: photoUrl == null || photoUrl.isEmpty
+                        ? Icon(
+                      Icons.person,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.surface,
+                    )
+                        : null,
+                  ),
+                  title: Text(
+                    'Profile settings',
+                    style: GoogleFonts.afacad(fontSize: 18),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
+
 
           const SizedBox(height: 16),
 
@@ -178,14 +208,11 @@ class _PersonalLikedMoviesState extends State<PersonalLikedMovies> {
               ),
               onTap: () async {
                 try {
-                  await firebaseAuthRepo.logout();
+                  await _userService.logOut();
 
                   if (!mounted) return;
 
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/login',
-                        (route) => false,
-                  );
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 } catch (e) {
                   debugPrint("Logout error: $e");
                 }
@@ -202,6 +229,7 @@ class _PersonalLikedMoviesState extends State<PersonalLikedMovies> {
                 style: TextStyle(
                   decoration: TextDecoration.underline,
                   color: Colors.red, // optional but recommended
+                  decorationColor: Colors.red,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -242,18 +270,35 @@ class _PersonalLikedMoviesState extends State<PersonalLikedMovies> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
 
-              // TODO:
-              // 1. Delete user document from Firestore
-              // 2. Delete auth account
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+
+                if (user == null) return;
+
+                final uid = user.uid;
+
+                // Delete Firestore user data
+                await _userService.deleteAccount(uid);
+
+                // Delete Firebase Auth account
+                await user.delete();
+
+                if (!mounted) return;
+
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              } catch (e) {
+                debugPrint("Delete account error: $e");
+              }
             },
             child: const Text(
               'Delete',
               style: TextStyle(color: Colors.red),
             ),
-          ),
+          )
+
         ],
       ),
     );
