@@ -97,6 +97,7 @@ class ForYouPageService {
       final keywords = <String>[];
       for (var doc in keywordDocs) {
         if (!doc.exists) continue;
+        print(doc.data()?['keywords']);
         final k = doc.data()?['keywords'] ?? [];
         if (k is List && k.isNotEmpty) {
           final shuffled = List.from(k)..shuffle(Random());
@@ -110,6 +111,7 @@ class ForYouPageService {
 
       for (final kw in searchKeywords) {
         try {
+          print("browsing keyword: $kw");
           final results = await _tmdb.discoverByKeyword(keyword: kw);
           discovered.addAll(results.map((m) => m.id.toString()).take(3));
         } catch (_) {}
