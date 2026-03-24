@@ -29,6 +29,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _photoUrl;
   bool _isUploading = false;
 
+  String? _oldUsername;
+
 
   @override
   void initState() {
@@ -106,6 +108,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _nameController.text = data?['name'] ?? '';
           _usernameController.text = data?['username'] ?? '';
           _photoUrl = data?['photoUrl'];
+
+          _oldUsername = data?['username'];
         });
       }
     } catch (e) {
@@ -229,13 +233,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
+    final newUsername = _usernameController.text.trim().toLowerCase();
+
     setState(() => _isSaving = true);
 
     try {
-      // ACTUAL SAVE TO FIRESTORE
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      final firestore = FirebaseFirestore.instance;
+
+      // 🔒 Check if username changed
+      if (_oldUsername != newUsername) {
+        // 1. Check if new username already exists
+        final usernameDoc =
+        await firestore.collection('usernames').doc(newUsername).get();
+
+        if (usernameDoc.exists) {
+          throw Exception("Username already taken");
+        }
+
+        // 2. Delete old username
+        if (_oldUsername != null && _oldUsername!.isNotEmpty) {
+          await firestore.collection('usernames').doc(_oldUsername).delete();
+        }
+
+        // 3. Create new username
+        await firestore.collection('usernames').doc(newUsername).set({
+          'uid': uid,
+        });
+      }
+
+      // 4. Update user document
+      await firestore.collection('users').doc(uid).update({
         'name': _nameController.text.trim(),
-        'username': _usernameController.text.trim().toLowerCase(),
+        'username': newUsername,
       });
 
       if (mounted) {
@@ -246,13 +275,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       debugPrint("Error saving profile: $e");
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to save: $e")),
+          SnackBar(content: Text(e.toString())),
         );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
-}
+  }
