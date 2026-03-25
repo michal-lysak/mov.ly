@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:movly/features/movies/presentation/favwatchlist_tab.dart';
 import 'package:provider/provider.dart';
 
 import '../../../social/data/favorites/data/cache/social_cache.dart';
@@ -85,7 +86,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     );
   }
 
-  void _openLikedMovies() {
+  void _openAccountOptions() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
@@ -94,6 +95,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       MaterialPageRoute(
         builder: (_) => PersonalLikedMovies(userId: userId),
       ),
+    );
+  }
+
+  void _openFavWatch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FavwatchlistTab())
     );
   }
 
@@ -135,7 +144,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     }
 
     final pages = <Widget>[
-      HomeTab(onOpenLiked: _openLikedMovies),
+      HomeTab(onAccountOptions_Tap: _openAccountOptions, onFavWatch_Tap: _openFavWatch),
       const DiscoverPage(),
       _currentProfileTab ??
           SocialTab(
