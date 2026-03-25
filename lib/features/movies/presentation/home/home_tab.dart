@@ -1,31 +1,32 @@
+// home_tab.dart (your HomeTab file) — full file with the fixed generation logic
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/ri.dart';
-import 'package:movly/features/auth/data/firestore_cloud/user_service.dart';
-import 'package:movly/features/favorites/data/firestore_cloud/favorite_service.dart';
-import 'package:movly/features/favorites/data/firestore_cloud/foryoupage_service.dart';
+import 'package:shimmer/shimmer.dart';
+
+// Your internal imports
 import 'package:movly/features/movies/data/services/tmdb_service.dart';
 import 'package:movly/features/movies/presentation/widgets/movie_sheet.dart';
-import 'package:shimmer/shimmer.dart';
+import '../../../social/data/favorites/data/services/favorite_service.dart';
+import '../../../social/data/favorites/data/services/foryoupage_service.dart';
 import '../../data/models/movie.dart';
-import '../../data/cache/backdrop_cache.dart';
 import '../widgets/horizontal-posters-scrolling.dart';
 import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
-  final VoidCallback onOpenLiked;
-  final UserService userService;
+  final VoidCallback onAccountOptions_Tap;
+  final VoidCallback onFavWatch_Tap;
 
-  const HomeTab({super.key, required this.onOpenLiked, required this.userService});
+  const HomeTab({super.key, required this.onAccountOptions_Tap, required this.onFavWatch_Tap});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> {
+class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
   final TMDBService _tmdbService = TMDBService();
   final FavoriteService _favoriteService = FavoriteService();
   final PageController _pageController = PageController(viewportFraction: 0.8);
@@ -33,15 +34,15 @@ class _HomeTabState extends State<HomeTab> {
   final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
 
   bool _isGenerating = false;
-  bool _isLoading = true; // Controls initial load state
-
+  bool _isLoading = true;
   List<Movie> _forYouMovies = [];
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-
-    // 1. Start loading data immediately
     _loadData();
 
     _pageController.addListener(() {
@@ -50,38 +51,36 @@ class _HomeTabState extends State<HomeTab> {
     });
   }
 
-  // 2. Main orchestration function
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _forYouService.dispose();
+    _activeIndexNotifier.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     if (mounted) setState(() => _isLoading = true);
 
-    // Step A: Generate recommendations if needed
     await _generateForYouIfNeeded(user);
 
     List<String> ids = [];
     try {
-      // 1. Reference the subcollection
       final subcollectionRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('foryoupagelist');
 
-      // 2. Fetch all documents in that subcollection
       final querySnapshot = await subcollectionRef.get();
-
-      ids = querySnapshot.docs.map((doc) => doc.id).toList();
-
-      // If your movie ID is stored in a field called 'movieId', use this instead:
-      // ids = querySnapshot.docs.map((doc) => doc.data()['movieId'] as String).toList();
-
+      // safer: read stored 'id' field (works even if doc IDs change later)
+      ids = querySnapshot.docs.map((doc) => doc.data()['id'].toString()).toList();
     } catch (e) {
-      print("Error fetching IDs from subcollection: $e");
+      debugPrint("Error fetching IDs: $e");
     }
-    // ---------------------------------------------
 
-    // Step C: Load the actual Movie objects
     if (ids.isNotEmpty) {
       await _loadMoviesFromIds(ids);
     }
@@ -93,26 +92,28 @@ class _HomeTabState extends State<HomeTab> {
     if (_isGenerating) return;
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      final alreadyGenerated = userDoc.data()?['forYouGenerated'] == true;
-
-      if (alreadyGenerated) return;
-
-      if (mounted) setState(() => _isGenerating = true);
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDoc = await userRef.get();
 
       await _forYouService.generateForYouMovies(user.uid);
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'forYouGenerated': true});
 
+      if (mounted) setState(() => _isGenerating = true);
+
+
+      final didGenerate = await _forYouService.generateForYouMovies(user.uid);
+
+      if (didGenerate) {
+        // use set + merge so it never fails if the user doc didn't exist yet
+        await userRef.set({'forYouGenerated': true}, SetOptions(merge: true));
+      } else {
+        // optional: helps you debug in Firestore
+        await userRef.set({
+          'forYouGenerated': false,
+        }, SetOptions(merge: true));
+      }
     } catch (e) {
-      print("Error generating: $e");
+      debugPrint("Error generating: $e");
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
@@ -128,85 +129,61 @@ class _HomeTabState extends State<HomeTab> {
             movies.add(movie);
           }
         } catch (e) {
-          print("Failed loading movie $id: $e");
+          debugPrint("Failed loading movie $id: $e");
         }
       }
-
-      if (mounted) {
-        setState(() {
-          _forYouMovies = movies;
-        });
-      }
+      if (mounted) setState(() => _forYouMovies = movies);
     } catch (e) {
-      print("Load error: $e");
+      debugPrint("Load error: $e");
     }
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _forYouService.dispose();
-    _activeIndexNotifier.dispose();
-    super.dispose();
+  Widget _shimmerCard(double width, double height) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade800,
+        highlightColor: Colors.grey.shade600,
+        child: Container(width: width, height: height, color: Colors.white),
+      ),
+    );
   }
 
-  Widget buildForYouShimmer({
-  required double cardWidth,
-  required double cardHeight,
-  }) {
-  return SizedBox(
-    height: cardHeight + 40,
-    child: PageView.builder(
-      controller: _pageController,
-      itemCount: 5, // fake items
-      itemBuilder: (context, index) {
-        return AnimatedBuilder(
-          animation: _pageController,
-          builder: (context, child) {
-            double scale = 0.85;
-
-            if (_pageController.position.haveDimensions) {
-              final page = _pageController.page ?? 0.0;
-              scale = (1 - (page - index).abs() * 0.15).clamp(0.85, 1.0);
-            }
-
-            return Center(
-              child: Transform.scale(
-                scale: scale,
-                child: _shimmerCard(cardWidth, cardHeight),
-              ),
-            );
-          },
-        );
-      },
-    ),
-  );
-}
-
-Widget _shimmerCard(double width, double height) {
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(16),
-    child: Shimmer.fromColors(
-      baseColor: Colors.grey.shade800,
-      highlightColor: Colors.grey.shade600,
-      child: Container(
-        width: width,
-        height: height,
-        color: Colors.white,
+  Widget buildForYouShimmer({required double cardWidth, required double cardHeight}) {
+    return SizedBox(
+      height: cardHeight + 40,
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return AnimatedBuilder(
+            animation: _pageController,
+            builder: (context, child) {
+              double scale = 0.85;
+              if (_pageController.position.haveDimensions) {
+                final page = _pageController.page ?? 0.0;
+                scale = (1 - (page - index).abs() * 0.15).clamp(0.85, 1.0);
+              }
+              return Center(
+                child: Transform.scale(
+                  scale: scale,
+                  child: _shimmerCard(cardWidth, cardHeight),
+                ),
+              );
+            },
+          );
+        },
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    super.build(context);
 
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text("Please log in")),
-      );
+      return const Scaffold(body: Center(child: Text("Please log in")));
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -221,37 +198,69 @@ Widget _shimmerCard(double width, double height) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-              // HEADER
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: Row(
                   children: [
                     Text(
                       'Home',
-                      style: GoogleFonts.afacad(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
+
+                            GestureDetector(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: Iconify(Ri.heart_fill, size: 28, color: Colors.white),
+                              ),
+                              onTap: widget.onFavWatch_Tap,
+                            ),
+
+                            const SizedBox(width: 20),
+
                     GestureDetector(
-                      onTap: widget.onOpenLiked,
-                      child: Iconify(
-                        Ri.heart_fill,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 24,
+                      onTap: widget.onAccountOptions_Tap,
+                      child: StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          String? photoUrl;
+
+                          if (snapshot.hasData && snapshot.data!.exists) {
+                            final data = snapshot.data!.data() as Map<String, dynamic>;
+                            photoUrl = data['photoUrl'];
+                          }
+
+                          return CircleAvatar(
+                            radius: 15,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundImage:
+                            photoUrl != null && photoUrl.isNotEmpty
+                                ? NetworkImage(photoUrl)
+                                : null,
+                            child: photoUrl == null || photoUrl.isEmpty
+                                ? Icon(
+                              Icons.person,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.surface,
+                            )
+                                : null,
+                          );
+                        },
                       ),
-                    )
+
+                    ),
+
                   ],
                 ),
               ),
               const SizedBox(height: 20),
 
               if (_isLoading || _isGenerating)
-                buildForYouShimmer(
-                  cardWidth: cardWidth,
-                  cardHeight: cardHeight,
-                )
+                buildForYouShimmer(cardWidth: cardWidth, cardHeight: cardHeight)
               else if (_forYouMovies.isEmpty)
                 SizedBox(
                   height: cardHeight + 40,
@@ -274,53 +283,44 @@ Widget _shimmerCard(double width, double height) {
                     itemCount: _forYouMovies.length,
                     itemBuilder: (context, index) {
                       final movie = _forYouMovies[index];
-                      return Padding(
-                        padding: const EdgeInsets.all(0.0),
-                        child: ValueListenableBuilder<int>(
-                          valueListenable: _activeIndexNotifier,
-                          builder: (context, activeIndex, child) {
-                            return MovieCard(
-                              userService: widget.userService,
-                              movie: movie,
-                              width: cardWidth,
-                              height: cardHeight,
-                              isActive: index == activeIndex,
-                              onTap: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (context) => MovieSheet(movie: movie),
-                                );
-                              },
-                            );
-                          },
-                        ),
+                      return ValueListenableBuilder<int>(
+                        valueListenable: _activeIndexNotifier,
+                        builder: (context, activeIndex, child) {
+                          return MovieCard(
+                            movie: movie,
+                            width: cardWidth,
+                            height: cardHeight,
+                            isActive: index == activeIndex,
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => MovieSheet(movie: movie),
+                              );
+                            },
+                          );
+                        },
                       );
                     },
                   ),
                 ),
-
               const SizedBox(height: 20),
-
               MovieCarousel(
-                title: 'People love the most',
+                title: 'Most loved movies',
                 sectionKey: 'top_favorites',
                 moviesFuture: _favoriteService.fetchTopFavoriteMovies(),
               ),
-
               MovieCarousel(
                 title: 'Now in Cinemas',
                 sectionKey: 'now_playing',
                 moviesFuture: _tmdbService.fetchNowPlayingMovies(),
               ),
-
               MovieCarousel(
                 title: 'Popular now',
                 sectionKey: 'popular',
                 moviesFuture: _tmdbService.fetchPopularMovies(),
               ),
-
               MovieCarousel(
                 title: 'Horror',
                 sectionKey: 'horror',
@@ -333,4 +333,3 @@ Widget _shimmerCard(double width, double height) {
     );
   }
 }
-

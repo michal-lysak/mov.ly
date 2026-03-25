@@ -1,18 +1,24 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../auth/data/firestore_cloud/user_service.dart';
-import '../UserProfile/user_profile_tab.dart';
+import 'package:flutter/material.dart';
+import 'package:movly/features/movies/presentation/favwatchlist_tab.dart';
+import 'package:provider/provider.dart';
+
+import '../../../social/data/favorites/data/cache/social_cache.dart';
+import '../../../social/data/favorites/data/services/favorite_service.dart';
+import '../../../social/data/favorites/data/services/follow_service.dart';
+import '../../../social/tabs/social_tab.dart';
+import '../../../social/tabs/user_profile_tab.dart';
+import '../../../user/auth/data/firestore_cloud/user_service.dart';
+
 import '../discover/discover_tab.dart';
-import '../social/social_tab.dart';
 import '../widgets/navbar_btn.dart';
-import 'personal_liked_movies_page.dart';
 import 'home_tab.dart';
+import '../account/account-options_tab.dart';
 
 class HomePage extends StatefulWidget {
-  final UserService userService;
-  const HomePage({super.key, required this.userService});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -22,62 +28,105 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   @override
   bool get wantKeepAlive => true;
 
-  int index = 0;
+  int _index = 0;
 
-  // Current user's username (fetched from Firestore)
-  String? currentUserUsername;
-  bool isLoadingUsername = true;
+  String? _currentUserUsername;
+  bool _isLoadingUsername = true;
 
-  // Social tab can show profile dynamically
   Widget? _currentProfileTab;
 
   @override
   void initState() {
     super.initState();
-    _fetchCurrentUserUsername();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initAppData());
   }
 
-  Future<void> _fetchCurrentUserUsername() async {
-    final userId = FirebaseAuth.instance.currentUser!.uid;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  Future<void> _initAppData() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      if (mounted) setState(() => _isLoadingUsername = false);
+      return;
+    }
 
-    setState(() {
-      currentUserUsername = doc['username'];
-      isLoadingUsername = false;
-    });
+    try {
+      final userService = context.read<UserService>();
+      final userDoc = await userService.getUser(firebaseUser.uid);
+      final username = userDoc?.data()?['username'] as String?;
 
-    // Load following cache now that we have username
-    await widget.userService.loadFollowingCache(currentUserUsername!);
+      if (!mounted) return;
+
+      setState(() {
+        _currentUserUsername = username;
+        _isLoadingUsername = false;
+      });
+
+      if (username == null || username.isEmpty) return;
+
+      _startBackgroundSync(username);
+    } catch (e) {
+      debugPrint('Error initializing app data: $e');
+      if (mounted) setState(() => _isLoadingUsername = false);
+    }
   }
 
-  void _openLikedMovies() {
-    final userId = FirebaseAuth.instance.currentUser!.uid;
+  void _startBackgroundSync(String myUsername) {
+    final socialCache = context.read<SocialCache>();
+    final followService = context.read<FollowService>();
+    final favoriteService = context.read<FavoriteService>();
+
+    socialCache.syncFriendsData(
+      myUsername: myUsername,
+      followService: followService,
+      favoriteService: favoriteService,
+    );
+
+    followService.listenToFollowing(
+      myUsername: myUsername,
+      cache: socialCache,
+    );
+  }
+
+  void _openAccountOptions() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PersonalLikedMovies(userId: userId),
+        builder: (_) => PersonalLikedMovies(userId: userId),
       ),
     );
   }
 
-  void openUserProfile(String username) {
+  void _openFavWatch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FavwatchlistTab())
+    );
+  }
+
+  void _openUserProfile(String username) {
+    final myUsername = _currentUserUsername;
+    if (myUsername == null || myUsername.isEmpty) return;
+
     setState(() {
       _currentProfileTab = UserProfileTab(
         username: username,
-        onBack: () {
-          setState(() {
-            _currentProfileTab = null; // go back to SocialTab
-          });
-        },
+        currentUserUsername: myUsername,
+        onBack: () => setState(() => _currentProfileTab = null),
       );
-      index = 2; // switch to SocialTab
+      _index = 2;
     });
   }
 
-  // Custom back button behavior
   Future<bool> _onWillPop() async {
-    if (index != 0) {
-      setState(() => index = 0);
+    if (_currentProfileTab != null) {
+      setState(() => _currentProfileTab = null);
+      return false;
+    }
+    if (_index != 0) {
+      setState(() => _index = 0);
       return false;
     }
     return true;
@@ -87,22 +136,20 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   Widget build(BuildContext context) {
     super.build(context);
 
-    if (isLoadingUsername) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+    if (_isLoadingUsername) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    final pages = [
-      HomeTab(
-          userService: widget.userService,
-          onOpenLiked: _openLikedMovies),
+    final pages = <Widget>[
+      HomeTab(onAccountOptions_Tap: _openAccountOptions, onFavWatch_Tap: _openFavWatch),
       const DiscoverPage(),
       _currentProfileTab ??
           SocialTab(
-            userService: widget.userService,
-            currentUserUsername: currentUserUsername!,
-            onUserTap: openUserProfile,
+            currentUserUsername: _currentUserUsername ?? '',
+            onUserTap: _openUserProfile,
           ),
     ];
 
@@ -112,50 +159,58 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         backgroundColor: Theme.of(context).colorScheme.surface,
         extendBody: true,
         body: IndexedStack(
-          index: index,
+          index: _index,
           children: pages,
         ),
-        bottomNavigationBar: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 70.0),
-            child: Container(
-              width: double.infinity,
-              height: 70,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.08),
-                    width: 0.5,
-                  ),
-                ),
+        bottomNavigationBar: _buildBottomNavbar(),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavbar() {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 70),
+        child: Container(
+          height: 70,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(context).colorScheme.secondary.withOpacity(0.08),
+                width: 0.5,
               ),
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    NavIcon(
-                      iconLine: 'lib/assets/icons/home-line.svg',
-                      iconSolid: 'lib/assets/icons/home.svg',
-                      selected: index == 0,
-                      onTap: () => setState(() => index = 0),
-                    ),
-                    NavIcon(
-                      iconLine: 'lib/assets/icons/compass-2-line.svg',
-                      iconSolid: 'lib/assets/icons/compass-2.svg',
-                      selected: index == 1,
-                      onTap: () => setState(() => index = 1),
-                    ),
-                    NavIcon(
-                      iconLine: 'lib/assets/icons/users-line.svg',
-                      iconSolid: 'lib/assets/icons/users.svg',
-                      selected: index == 2,
-                      onTap: () => setState(() => index = 2),
-                    ),
-                  ],
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                NavIcon(
+                  iconLine: 'lib/assets/icons/home-line.svg',
+                  iconSolid: 'lib/assets/icons/home.svg',
+                  selected: _index == 0,
+                  onTap: () => setState(() => _index = 0),
                 ),
-              ),
+                NavIcon(
+                  iconLine: 'lib/assets/icons/compass-2-line.svg',
+                  iconSolid: 'lib/assets/icons/compass-2.svg',
+                  selected: _index == 1,
+                  onTap: () => setState(() => _index = 1),
+                ),
+                NavIcon(
+                  iconLine: 'lib/assets/icons/users-line.svg',
+                  iconSolid: 'lib/assets/icons/users.svg',
+                  selected: _index == 2,
+                  onTap: () => setState(() {
+                    if (_index == 2 && _currentProfileTab != null) {
+                      _currentProfileTab = null;
+                    }
+                    _index = 2;
+                  }),
+                ),
+              ],
             ),
           ),
         ),
