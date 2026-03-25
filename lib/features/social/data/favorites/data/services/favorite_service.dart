@@ -82,6 +82,41 @@ class FavoriteService {
     await userRef.update({listName: updated});
   }
 
+Stream<Map<String, List<Movie>>> streamUserLists(String userId) {
+  final userRef = _db.collection('favoritesperuser').doc(userId);
+
+  return userRef.snapshots().asyncMap((snap) async {
+    if (!snap.exists || snap.data() == null) {
+      return {
+        'favorites': [],
+        'watchlist': [],
+      };
+    }
+
+    final data = snap.data()!;
+
+    final favRaw = List<Map<String, dynamic>>.from(data['favorites'] ?? []);
+    final watchRaw = List<Map<String, dynamic>>.from(data['watchlist'] ?? []);
+
+    final favIds = favRaw.map((f) => f['id'] as int).toList();
+    final watchIds = watchRaw.map((f) => f['id'] as int).toList();
+
+    final favMovies = await Future.wait(
+      favIds.map((id) => _tmdb.fetchMovieById(id)),
+    );
+
+    final watchMovies = await Future.wait(
+      watchIds.map((id) => _tmdb.fetchMovieById(id)),
+    );
+
+    return {
+      'favorites': favMovies.whereType<Movie>().toList(),
+      'watchlist': watchMovies.whereType<Movie>().toList(),
+    };
+  });
+}
+
+
   Future<List<Movie?>> fetchFavoriteMovies(String userId) async {
     debugPrint("favMovies: $userId");
 
