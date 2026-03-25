@@ -17,9 +17,10 @@ import '../widgets/horizontal-posters-scrolling.dart';
 import '../widgets/movie_card.dart';
 
 class HomeTab extends StatefulWidget {
-  final VoidCallback onOpenLiked;
+  final VoidCallback onAccountOptions_Tap;
+  final VoidCallback onFavWatch_Tap;
 
-  const HomeTab({super.key, required this.onOpenLiked});
+  const HomeTab({super.key, required this.onAccountOptions_Tap, required this.onFavWatch_Tap});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -206,8 +207,20 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                       style: GoogleFonts.afacad(fontSize: 32, fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
+
+                            GestureDetector(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: Iconify(Ri.heart_fill, size: 28, color: Colors.white),
+                              ),
+                              onTap: widget.onFavWatch_Tap,
+                            ),
+
+                            const SizedBox(width: 20),
+
                     GestureDetector(
-                      onTap: widget.onOpenLiked,
+                      onTap: widget.onAccountOptions_Tap,
                       child: StreamBuilder<DocumentSnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection('users')
