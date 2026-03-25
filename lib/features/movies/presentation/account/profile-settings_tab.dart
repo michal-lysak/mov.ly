@@ -252,12 +252,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
         // 2. Delete old username
         if (_oldUsername != null && _oldUsername!.isNotEmpty) {
+          await _moveSubcollections(_oldUsername!, newUsername);
           await firestore.collection('usernames').doc(_oldUsername).delete();
         }
 
         // 3. Create new username
         await firestore.collection('usernames').doc(newUsername).set({
           'uid': uid,
+          'username': newUsername,
+          'name': _nameController.text.trim(),
+          'photoUrl': _photoUrl ?? '',
         });
       }
 
@@ -285,4 +289,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) setState(() => _isSaving = false);
     }
   }
+
+  Future<void> _moveSubcollections(
+      String oldUsername,
+      String newUsername,
+      ) async {
+    final firestore = FirebaseFirestore.instance;
+
+    final oldRef = firestore.collection('usernames').doc(oldUsername);
+    final newRef = firestore.collection('usernames').doc(newUsername);
+
+    final subcollections = ['followers', 'following'];
+
+    for (final sub in subcollections) {
+      final oldSub = oldRef.collection(sub);
+      final newSub = newRef.collection(sub);
+
+      final snapshot = await oldSub.get();
+
+      for (final doc in snapshot.docs) {
+        await newSub.doc(doc.id).set(doc.data());
+      }
+    }
   }
+
+}
